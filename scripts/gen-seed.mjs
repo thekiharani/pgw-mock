@@ -61,7 +61,11 @@ for (const [label, start, prefix, kind, capabilities, isSasapay] of RANGE_SPECS)
       tillValue = shortcode;
       mpesaBalance = 0;
       sasapayBalance = balance;
-      meta = { description: `${name} Sandbox Merchant`, sasapay: { till_number: shortcode } };
+      // SasaPay tills are full-service: they always carry all three capabilities.
+      meta = {
+        description: `${name} Sandbox Merchant`,
+        sasapay: { till_number: shortcode, capabilities: ['c2b', 'b2c', 'b2b'] },
+      };
     } else {
       paybillValue = shortcode;
       tillValue = `NA-MPESA-${shortcode}`;

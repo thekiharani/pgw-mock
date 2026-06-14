@@ -110,7 +110,7 @@ export async function seedDatabase(): Promise<void> {
       sasapayTillNumber: SASAPAY_TILL,
       mpesaBalance: '0.00',
       sasapayBalance: '500000.00',
-      meta: {},
+      meta: { sasapay: { capabilities: ['c2b', 'b2c', 'b2b'] } },
     },
     {
       id: 'm-broke-mpesa-001',

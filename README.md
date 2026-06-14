@@ -82,6 +82,8 @@ Each M-Pesa shortcode carries explicit capabilities in `merchants.meta.mpesa`:
 
 Capability mismatches return the Daraja `400.002.02` envelope. Missing metadata defaults to a `PAYBILL` with all three capabilities.
 
+**SasaPay** tills are full-service: every SasaPay merchant carries all three capabilities (`meta.sasapay.capabilities = ["c2b","b2c","b2b"]`) and SasaPay routes are not capability-gated. Only M-Pesa shortcodes restrict to a 1–3 subset.
+
 ### Seeded shortcodes
 
 | Range         | Kind         | Capabilities                                                  |
