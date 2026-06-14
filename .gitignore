@@ -1,6 +1,38 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build output
 dist/
+*.tsbuildinfo
+
+# Drizzle-kit generated artifacts
+drizzle/
+
+# Environment / secrets (keep .env.example)
 .env
+.env.*
+!.env.example
+
+# Logs
 *.log
-.DS_Store
+logs/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test / coverage output
 coverage/
+.vitest/
+
+# Caches
+.cache/
+.eslintcache
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
