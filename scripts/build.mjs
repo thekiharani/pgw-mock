@@ -16,8 +16,9 @@ await build({
   target: 'node22',
   packages: 'external',
   sourcemap: false,
+  minify: true,
   tsconfig: 'tsconfig.json',
   logLevel: 'info',
 });
 
-console.log('Built dist/index.js (single-file ESM, no source maps).');
+console.log('Built dist/index.js (single-file ESM, minified, no source maps).');
