@@ -19,16 +19,16 @@ services:
       # Reuse the existing MySQL container on the shared `norialabs` network
       # (resolved by container name, port 3306 in-network) — do not start our own.
       # Literals here so the host-oriented .env (127.0.0.1:3326) does not leak in.
-      DATABASE_URL: ""
+      DATABASE_URL: ''
       DB_HOST: noria_mysql
-      DB_PORT: "3306"
+      DB_PORT: '3306'
       DB_USER: ${DB_USER:-admin_444888}
       DB_PASSWORD: ${DB_PASSWORD:-pass_444888}
       DB_NAME: ${DB_NAME:-pgw_mock}
-      RUN_MIGRATIONS: "true"
-      WAIT_FOR_DB: "true"
+      RUN_MIGRATIONS: 'true'
+      WAIT_FOR_DB: 'true'
     ports:
-      - "${HOST_PORT:-4102}:4002"
+      - '${HOST_PORT:-4102}:4002'
     read_only: true
     tmpfs:
       - /tmp
@@ -41,15 +41,15 @@ services:
       resources:
         limits:
           memory: 512M
-          cpus: "1.0"
+          cpus: '1.0'
         reservations:
           memory: 128M
-          cpus: "0.25"
+          cpus: '0.25'
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     networks:
       - norialabs
 

@@ -1,8 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL ??
-  'mysql://root:pass_444888@127.0.0.1:3326/pgw_mock_test';
+  process.env.TEST_DATABASE_URL ?? 'mysql://root:pass_444888@127.0.0.1:3326/pgw_mock_test';
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
