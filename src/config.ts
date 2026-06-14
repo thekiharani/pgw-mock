@@ -86,7 +86,7 @@ function buildSettings(): Settings {
   const DB_PORT = envInt('DB_PORT', 3306);
   const DB_USER = envStr('DB_USER', 'root');
   const DB_PASSWORD = envStr('DB_PASSWORD', '');
-  const DB_NAME = envStr('DB_NAME', 'norialabs_payments_gateways');
+  const DB_NAME = envStr('DB_NAME', 'pgw_mock');
 
   return {
     APP_HOST: envStr('APP_HOST', '0.0.0.0'),

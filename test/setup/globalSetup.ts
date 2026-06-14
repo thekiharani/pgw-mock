@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 export default async function globalSetup() {
   const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-  const url = process.env.DATABASE_URL ?? 'mysql://root:root@127.0.0.1:3307/pgw_mock_test';
+  // globalSetup runs in the main process and does not see Vitest's test.env,
+  // so default to the same test DB URL as vitest.config.ts.
+  const url =
+    process.env.TEST_DATABASE_URL ?? 'mysql://root:pass_444888@127.0.0.1:3326/pgw_mock_test';
   // dbmate auto-creates the database and applies all migrations (schema + seed).
   // Per-test reset wipes data, so the seed rows are harmless.
   execSync('dbmate up', {

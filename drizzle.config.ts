@@ -8,7 +8,7 @@ function databaseUrl(): string {
   const port = process.env.DB_PORT ?? '3306';
   const user = process.env.DB_USER ?? 'root';
   const password = encodeURIComponent(process.env.DB_PASSWORD ?? '');
-  const name = process.env.DB_NAME ?? 'norialabs_payments_gateways';
+  const name = process.env.DB_NAME ?? 'pgw_mock';
   return `mysql://${user}:${password}@${host}:${port}/${name}`;
 }
 

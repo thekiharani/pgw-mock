@@ -49,7 +49,7 @@ STRICT_PROVIDER_AUTH=true
 STRICT_PROVIDER_VALIDATION=true
 RELAXED_WAAS_KYC=false
 MOCK_CALLBACK_DELAY_SECONDS=0
-DATABASE_URL=mysql://root:root@127.0.0.1:3306/norialabs_payments_gateways
+DATABASE_URL=mysql://root:root@127.0.0.1:3306/pgw_mock
 ```
 
 `DATABASE_URL` takes precedence; otherwise the URL is assembled from `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`. A SQLAlchemy-style `+driver` suffix is stripped automatically.
@@ -139,7 +139,7 @@ pnpm lint     # eslint + prettier --check
 pnpm fmt      # prettier --write + eslint --fix
 ```
 
-Tests run against a disposable MySQL database (`TEST_DATABASE_URL`, default `mysql://root:root@127.0.0.1:3307/pgw_mock_test`); the global setup runs `dbmate up` against it and each test resets fixtures.
+Tests run against a `pgw_mock_test` database (`TEST_DATABASE_URL`, default `mysql://root:pass_444888@127.0.0.1:3326/pgw_mock_test` — the shared `noria_mysql` container); the global setup runs `dbmate up` against it and each test resets fixtures.
 
 ## Docker
 
@@ -154,9 +154,13 @@ there — it does not start its own database. Migrations run on start via
 docker compose up --build
 ```
 
-Point it at the existing DB container via `.env` (`DB_HOST` defaults to `pgw-db`,
-plus `DB_USER`/`DB_PASSWORD`/`DB_NAME`). The app is published on host port
-`${HOST_PORT:-4102}`.
+In compose it connects to the existing `noria_mysql` container on the network
+(in-network `noria_mysql:3306`); credentials/db come from `.env`
+(`DB_USER`/`DB_PASSWORD`/`DB_NAME`, default db `pgw_mock`). The app is published
+on host port `${HOST_PORT:-4102}`.
+
+From the host (e.g. `pnpm dev`, `pnpm db:up`) reach the same MySQL via its
+published port — `127.0.0.1:3326` — as configured in `.env`.
 
 > This service uses MySQL only; it has no Redis dependency, so nothing Redis is
 > started or required.

@@ -16,15 +16,15 @@ services:
       STRICT_PROVIDER_AUTH: ${STRICT_PROVIDER_AUTH:-true}
       STRICT_PROVIDER_VALIDATION: ${STRICT_PROVIDER_VALIDATION:-true}
       RELAXED_WAAS_KYC: ${RELAXED_WAAS_KYC:-false}
-      # Reuse the existing MySQL (and Redis, if/when needed) containers already
-      # running on the shared `norialabs` network — do not start our own.
-      # Resolve the DB by its service/container name on that network.
+      # Reuse the existing MySQL container on the shared `norialabs` network
+      # (resolved by container name, port 3306 in-network) — do not start our own.
+      # Literals here so the host-oriented .env (127.0.0.1:3326) does not leak in.
       DATABASE_URL: ""
-      DB_HOST: ${DB_HOST:-pgw-db}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      DB_HOST: noria_mysql
+      DB_PORT: "3306"
+      DB_USER: ${DB_USER:-admin_444888}
+      DB_PASSWORD: ${DB_PASSWORD:-pass_444888}
+      DB_NAME: ${DB_NAME:-pgw_mock}
       RUN_MIGRATIONS: "true"
       WAIT_FOR_DB: "true"
     ports:
