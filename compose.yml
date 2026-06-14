@@ -1,0 +1,58 @@
+services:
+  pgw-mock:
+    build: .
+    image: ghcr.io/norialabs/pgw-mock:${IMAGE_TAG:-latest}
+    container_name: noria-pgw-mock
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: ${APP_PORT:-4002}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SERVICE_URL: ${SERVICE_URL:-http://localhost:4002}
+      PAYMENTS_SERVICE_URL: ${PAYMENTS_SERVICE_URL:-}
+      STRICT_PROVIDER_AUTH: ${STRICT_PROVIDER_AUTH:-true}
+      STRICT_PROVIDER_VALIDATION: ${STRICT_PROVIDER_VALIDATION:-true}
+      RELAXED_WAAS_KYC: ${RELAXED_WAAS_KYC:-false}
+      # Reuse the existing MySQL (and Redis, if/when needed) containers already
+      # running on the shared `norialabs` network — do not start our own.
+      # Resolve the DB by its service/container name on that network.
+      DATABASE_URL: ""
+      DB_HOST: ${DB_HOST:-pgw-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      RUN_MIGRATIONS: "true"
+      WAIT_FOR_DB: "true"
+    ports:
+      - "${HOST_PORT:-4102}:4002"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 35s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - norialabs
+
+networks:
+  norialabs:
+    external: true

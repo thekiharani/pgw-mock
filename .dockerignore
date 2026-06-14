@@ -33,7 +33,7 @@ eslint.config.js
 # Docs & compose
 README.md
 *.md
-docker-compose.yml
+compose.yml
 .dockerignore
 Dockerfile
 

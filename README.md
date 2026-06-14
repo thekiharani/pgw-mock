@@ -143,11 +143,23 @@ Tests run against a disposable MySQL database (`TEST_DATABASE_URL`, default `mys
 
 ## Docker
 
+`compose.yml` runs **only the app** and joins the existing external `norialabs`
+network, reusing the MySQL (and Redis, when needed) containers already running
+there — it does not start its own database. Migrations run on start via
+`RUN_MIGRATIONS=true`.
+
 ```bash
+# the shared network must already exist (created by the platform stack):
+#   docker network create norialabs   # one-time, if missing
 docker compose up --build
 ```
 
-Brings up MySQL + the app (migrations run on start via `RUN_MIGRATIONS=true`), serving on host port `4102`.
+Point it at the existing DB container via `.env` (`DB_HOST` defaults to `pgw-db`,
+plus `DB_USER`/`DB_PASSWORD`/`DB_NAME`). The app is published on host port
+`${HOST_PORT:-4102}`.
+
+> This service uses MySQL only; it has no Redis dependency, so nothing Redis is
+> started or required.
 
 ## Notes
 
