@@ -14,6 +14,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 FROM deps AS build
 COPY tsconfig.json ./
+COPY scripts ./scripts
 COPY src ./src
 RUN pnpm build
 

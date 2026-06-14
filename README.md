@@ -130,9 +130,10 @@ Scenario resolution priority: persisted DB scenario → `X-Mock-Result-Code` req
 ## Development commands
 
 ```bash
-pnpm dev      # tsx watch
-pnpm build    # tsc -> dist/
-pnpm start    # node dist/index.js
+pnpm dev       # tsx watch
+pnpm build     # esbuild -> single-file ESM dist/index.js (no source maps)
+pnpm typecheck # tsc --noEmit (src + tests)
+pnpm start     # node dist/index.js
 pnpm test     # Vitest (requires a MySQL test DB; see vitest.config.ts)
 pnpm lint     # eslint + prettier --check
 pnpm fmt      # prettier --write + eslint --fix
