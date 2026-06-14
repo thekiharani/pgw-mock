@@ -12,6 +12,12 @@ export default defineConfig({
     setupFiles: ['./test/setup/setup.ts'],
     fileParallelism: false,
     pool: 'forks',
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      // The listen() bootstrap is exercised at runtime, not under test.
+      exclude: ['src/index.ts'],
+    },
     env: {
       // Point the app at the disposable test database and disable .env loading.
       DOTENV_CONFIG_PATH: './.env.test-nonexistent',
@@ -21,6 +27,8 @@ export default defineConfig({
       STRICT_PROVIDER_VALIDATION: 'true',
       RELAXED_WAAS_KYC: 'false',
       MOCK_CALLBACK_DELAY_SECONDS: '0',
+      WEBHOOK_RETRY_DELAY_SECONDS: '0',
+      HTTP_TIMEOUT_SECONDS: '5',
       SERVICE_URL: 'http://127.0.0.1:4002',
       PAYMENTS_SERVICE_URL: 'http://127.0.0.1:4001',
     },

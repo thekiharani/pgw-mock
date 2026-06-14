@@ -8,7 +8,12 @@ import {
   StandingOrderRequest,
 } from '@/schemas/mpesa.js';
 import { C2BRequest as SasaC2B } from '@/schemas/sasapay.js';
-import { BusinessOnboardingRequest, PersonalOnboardingRequest } from '@/schemas/waas.js';
+import {
+  BusinessKycRequest,
+  BusinessOnboardingRequest,
+  PersonalConfirmationRequest,
+  PersonalOnboardingRequest,
+} from '@/schemas/waas.js';
 
 describe('STKPushRequest', () => {
   it('normalizes amount and accepts valid payload', () => {
@@ -170,5 +175,116 @@ describe('WaaS onboarding', () => {
       industryId: 62,
     });
     expect(r.success).toBe(true);
+  });
+});
+
+describe('WaaS schema branches', () => {
+  const baseBiz = {
+    merchantCode: '888000',
+    businessName: 'Acme',
+    mobileNumber: '254712345678',
+  };
+
+  it('rejects each invalid lookup id', () => {
+    for (const field of [
+      'productType',
+      'countryId',
+      'subregionId',
+      'industryId',
+      'subIndustryId',
+    ]) {
+      expect(BusinessOnboardingRequest.safeParse({ ...baseBiz, [field]: 99999 }).success).toBe(
+        false,
+      );
+    }
+  });
+
+  it('rejects non-integer lookup id', () => {
+    expect(BusinessOnboardingRequest.safeParse({ ...baseBiz, countryId: 'abc' }).success).toBe(
+      false,
+    );
+  });
+
+  it('accepts string lookup ids and full valid set', () => {
+    const r = BusinessOnboardingRequest.safeParse({
+      ...baseBiz,
+      productType: '1',
+      countryId: '1',
+      subregionId: '101',
+      industryId: '62',
+      subIndustryId: '6201',
+      businessTypeId: '3',
+      bankId: 5,
+      bankCode: '01',
+      bankAccountNumber: '123',
+      estimatedMonthlyTransactionAmount: '1000.50',
+      estimatedMonthlyTransactionCount: '40',
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.estimatedMonthlyTransactionAmount).toBe('1000.5');
+  });
+
+  it('rejects negative estimated amount/count and bad count', () => {
+    expect(
+      BusinessOnboardingRequest.safeParse({ ...baseBiz, estimatedMonthlyTransactionAmount: '-1' })
+        .success,
+    ).toBe(false);
+    expect(
+      BusinessOnboardingRequest.safeParse({ ...baseBiz, estimatedMonthlyTransactionCount: '-1' })
+        .success,
+    ).toBe(false);
+    expect(
+      BusinessOnboardingRequest.safeParse({ ...baseBiz, estimatedMonthlyTransactionCount: '1.5' })
+        .success,
+    ).toBe(false);
+  });
+
+  it('validates director mobile numbers and passthrough extras', () => {
+    const ok = BusinessOnboardingRequest.safeParse({
+      ...baseBiz,
+      directors: [{ firstName: 'A', mobileNumber: '254712345678', extraField: 'kept' }],
+    });
+    expect(ok.success).toBe(true);
+    const bad = BusinessOnboardingRequest.safeParse({
+      ...baseBiz,
+      directors: [{ mobileNumber: 'abc' }],
+    });
+    expect(bad.success).toBe(false);
+  });
+
+  it('personal confirmation requires 4-digit otp', () => {
+    expect(
+      PersonalConfirmationRequest.safeParse({ merchantCode: '888000', requestId: 'r', otp: '12' })
+        .success,
+    ).toBe(false);
+    expect(
+      PersonalConfirmationRequest.safeParse({ merchantCode: '888000', requestId: 'r', otp: 1234 })
+        .success,
+    ).toBe(true);
+  });
+
+  it('business kyc accepts directorsKyc passthrough and rejects unknown top-level field', () => {
+    expect(
+      BusinessKycRequest.safeParse({
+        merchantCode: '888000',
+        requestId: 'r',
+        directorsKyc: [{ directorKraPin: 'x', extra: 1 }],
+      }).success,
+    ).toBe(true);
+    expect(
+      BusinessKycRequest.safeParse({ merchantCode: '888000', requestId: 'r', bogus: 1 }).success,
+    ).toBe(false);
+  });
+
+  it('personal onboarding rejects bad email and unknown field', () => {
+    expect(
+      PersonalOnboardingRequest.safeParse({
+        merchantCode: '888000',
+        firstName: 'J',
+        lastName: 'D',
+        mobileNumber: '254712345678',
+        email: 'not-an-email',
+      }).success,
+    ).toBe(false);
   });
 });

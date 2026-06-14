@@ -293,3 +293,80 @@ describe('waas wallet + payments', () => {
     await flushBackgroundTasks();
   });
 });
+
+describe('waas payments — send-money & merchant-transfers', () => {
+  async function fundedAccount(mobile: string): Promise<string> {
+    const ob = await post(
+      `${W}/personal-onboarding/`,
+      { merchantCode: SASAPAY_TILL, firstName: 'P', lastName: 'Q', mobileNumber: mobile },
+      auth,
+    );
+    const requestId = ob.json.requestId;
+    const { json } = await get(`${W}/onboarding/requests/${requestId}?includeOtp=true`, auth);
+    await post(
+      `${W}/personal-onboarding/confirmation/`,
+      { merchantCode: SASAPAY_TILL, requestId, otp: json.data.otp },
+      auth,
+    );
+    await post(
+      `${W}/wallets/transactions/topup/`,
+      { merchantCode: SASAPAY_TILL, accountNumber: mobile, amount: '1000' },
+      auth,
+    );
+    return mobile;
+  }
+
+  it('send-money debits the wallet', async () => {
+    const acct = await fundedAccount('254700001001');
+    const res = await post(
+      `${W}/payments/send-money/`,
+      {
+        merchantCode: SASAPAY_TILL,
+        senderAccountNumber: acct,
+        receiverNumber: '254799999999',
+        amount: '250',
+        callbackUrl: 'https://example.com/cb',
+      },
+      auth,
+    );
+    expect(res.json.ResponseCode).toBe('0');
+    expect(res.json.senderBalanceAfter).toBe(750);
+    await flushBackgroundTasks();
+    const bal = await get(`${W}/wallets/${acct}/balance/`, auth);
+    expect(bal.json.data.balance).toBe(750);
+  });
+
+  it('merchant-transfers debits the wallet', async () => {
+    const acct = await fundedAccount('254700001002');
+    const res = await post(
+      `${W}/payments/merchant-transfers/`,
+      {
+        merchantCode: SASAPAY_TILL,
+        senderAccountNumber: acct,
+        receiverMerchantCode: '600100',
+        amount: '300',
+        callbackUrl: 'https://example.com/cb',
+      },
+      auth,
+    );
+    expect(res.json.ResponseCode).toBe('0');
+    expect(res.json.senderBalanceAfter).toBe(700);
+    await flushBackgroundTasks();
+  });
+
+  it('send-money rejects insufficient balance', async () => {
+    const acct = await fundedAccount('254700001003');
+    const res = await post(
+      `${W}/payments/send-money/`,
+      {
+        merchantCode: SASAPAY_TILL,
+        senderAccountNumber: acct,
+        receiverNumber: '254799999999',
+        amount: '99999',
+      },
+      auth,
+    );
+    expect(res.status).toBe(400);
+    expect(res.json.message).toBe('Insufficient wallet balance');
+  });
+});

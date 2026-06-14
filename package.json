@@ -17,6 +17,7 @@
     "fmt": "prettier --write . && eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage.enabled --coverage.provider=v8 --coverage.include='src/**'",
     "db:up": "dbmate up",
     "db:down": "dbmate down",
     "db:new": "dbmate new",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.1.8",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.1",
     "eslint": "^9.39.0",

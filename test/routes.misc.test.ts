@@ -170,3 +170,116 @@ describe('standing order tick', () => {
     void soId;
   });
 });
+
+describe('bill manager — more endpoints', () => {
+  it('opt-in then change details and billing info', async () => {
+    await post('/v1/billmanager-invoice/optin', {
+      shortcode: '887000',
+      callbackurl: 'https://e.co/x',
+    });
+    expect(
+      (
+        await post('/v1/billmanager-invoice/change-optin-details', {
+          shortcode: '887000',
+          email: 'a@b.c',
+        })
+      ).json.rescode,
+    ).toBe('200');
+    expect(
+      (await post('/v1/billmanager-invoice/change-billing-info', { shortcode: '887000', tax: 16 }))
+        .json.rescode,
+    ).toBe('200');
+    expect(
+      (await post('/v1/billmanager-invoice/change-optin-details', { shortcode: '999999' })).json
+        .rescode,
+    ).toBe('404');
+  });
+
+  it('single + bulk invoicing and status-not-found', async () => {
+    expect(
+      (
+        await post('/v1/billmanager-invoice/single-invoicing', {
+          externalReference: 'S1',
+          amount: '10',
+        })
+      ).json.Status,
+    ).toBe('Success');
+    const bulk = await post('/v1/billmanager-invoice/bulk-invoicing', {
+      invoices: [
+        { invoiceNumber: 'B1', amount: '5' },
+        { invoiceNumber: 'B2', amount: '6' },
+      ],
+    });
+    expect(bulk.json.acceptedInvoices).toEqual(['B1', 'B2']);
+    expect(
+      (await post('/v1/billmanager-invoice/bulk-invoicing', { invoices: [] })).json.Status,
+    ).toBe('Failed');
+    expect(
+      (await post('/v1/billmanager-invoice/invoices/status', { invoiceNumber: 'NOPE' })).json
+        .rescode,
+    ).toBe('404');
+  });
+
+  it('bulk-cancel + reconciliation', async () => {
+    await post('/v1/billmanager-invoice/invoices/create', { invoiceNumber: 'C9', amount: '1' });
+    const cancel = await post('/v1/billmanager-invoice/bulk-cancel-invoice', {
+      invoices: ['C9', 'MISSING'],
+    });
+    expect(cancel.json.cancelled).toEqual(['C9']);
+    expect(cancel.json.notFound).toEqual(['MISSING']);
+    const recon = await post('/v1/billmanager-invoice/payments-reconciliation', { x: 1 });
+    expect(recon.json.echo).toEqual({ x: 1 });
+  });
+});
+
+describe('home /ping + error envelopes', () => {
+  it('/ping returns null when payments service is unreachable', async () => {
+    const { status, json } = await get('/ping');
+    expect(status).toBe(200);
+    expect(json.pingResponse).toBeNull();
+  });
+
+  it('malformed JSON body yields a 4xx envelope', async () => {
+    const { getApp } = await import('@test/helpers/app.js');
+    const app = await getApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/mock/scenarios',
+      headers: { 'content-type': 'application/json' },
+      payload: '{ not json',
+    });
+    expect(res.statusCode).toBeGreaterThanOrEqual(400);
+    expect(res.statusCode).toBeLessThan(500);
+    expect(res.json().status).toBe(false);
+  });
+});
+
+describe('auth scheme errors', () => {
+  it('bearer wrong scheme and empty token', async () => {
+    expect(
+      (await post('/mpesa/stkpush/v1/processrequest', {}, { authorization: 'Token abc' })).json
+        .errorMessage,
+    ).toBe('Authorization type must be Bearer');
+    expect(
+      (await post('/mpesa/stkpush/v1/processrequest', {}, { authorization: 'Bearer' })).json
+        .errorMessage,
+    ).toBe('Bearer token is required');
+  });
+
+  it('basic wrong scheme and bad format', async () => {
+    expect(
+      (await get('/oauth/v1/generate?grant_type=client_credentials', { authorization: 'Bearer x' }))
+        .json.errorMessage,
+    ).toBe('Authorization type must be Basic');
+    const badFmt = await get('/oauth/v1/generate?grant_type=client_credentials', {
+      authorization: 'Basic bm9jb2xvbg==',
+    });
+    expect(badFmt.status).toBe(401);
+  });
+
+  it('sasapay bearer 401 uses sasapay envelope', async () => {
+    const { status, json } = await post('/sasapay/api/v1/payments/b2c/', {}, {});
+    expect(status).toBe(401);
+    expect(json.ResponseDescription).toBe('Authorization header is required');
+  });
+});
