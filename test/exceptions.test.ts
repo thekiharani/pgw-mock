@@ -9,15 +9,15 @@ import {
   MerchantNotFoundError,
   PayloadError,
   PersistenceError,
-} from '../src/errors.js';
+} from '@/errors.js';
 import {
   normalizeDecimalString,
   normalizeDigits,
   normalizeNonEmpty,
   normalizeOptionalDecimalString,
   normalizeUpperToken,
-} from '../src/schemas/common.js';
-import { settings } from '../src/config.js';
+} from '@/schemas/common.js';
+import { settings } from '@/config.js';
 
 describe('exceptions', () => {
   it('AppError default payload', () => {

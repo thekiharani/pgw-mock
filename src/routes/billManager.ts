@@ -1,7 +1,7 @@
 /** Daraja Bill Manager. Mirrors app/routes/bill_manager.py. Mounted at /v1/billmanager-invoice. */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-import { invoices, optIns } from './stores.js';
+import { invoices, optIns } from '@/routes/stores.js';
 
 function jsonBody(request: FastifyRequest): Record<string, any> {
   const ct = request.headers['content-type'] ?? '';

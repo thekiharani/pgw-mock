@@ -8,7 +8,7 @@ import {
   httpUrl,
   nonEmptyStr,
   shortCodeStr,
-} from './common.js';
+} from '@/schemas/common.js';
 import {
   VALID_BUSINESS_TYPE_IDS,
   VALID_COUNTRY_IDS,
@@ -16,7 +16,7 @@ import {
   VALID_PRODUCT_IDS,
   VALID_SUB_INDUSTRY_IDS,
   VALID_SUB_REGION_IDS,
-} from '../utils/waasReferenceData.js';
+} from '@/utils/waasReferenceData.js';
 
 /** Optional lookup-id field validated against a set; returns number|null. */
 function lookupId(validIds: Set<number>, fieldName: string) {

@@ -7,19 +7,19 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 
-import { settings } from './config.js';
-import { registerErrorHandlers } from './plugins/errorHandler.js';
-import { registerRequestLogger } from './plugins/requestLogger.js';
-import { registerBackgroundTasks } from './utils/background.js';
-import { billManagerRoutes } from './routes/billManager.js';
-import { homeRoutes } from './routes/home.js';
-import { mockAdminRoutes } from './routes/mockAdmin.js';
-import { oauthRoutes } from './routes/oauth.js';
-import { b2bExpressRoutes } from './routes/mpesa/b2bExpress.js';
-import { mpesaCoreRoutes } from './routes/mpesa/index.js';
-import { standingOrderRoutes } from './routes/mpesa/standingOrder.js';
-import { sasapayV1Routes } from './routes/sasapay/index.js';
-import { waasV2Routes } from './routes/sasapay/waas.js';
+import { settings } from '@/config.js';
+import { registerErrorHandlers } from '@/plugins/errorHandler.js';
+import { registerRequestLogger } from '@/plugins/requestLogger.js';
+import { registerBackgroundTasks } from '@/utils/background.js';
+import { billManagerRoutes } from '@/routes/billManager.js';
+import { homeRoutes } from '@/routes/home.js';
+import { mockAdminRoutes } from '@/routes/mockAdmin.js';
+import { oauthRoutes } from '@/routes/oauth.js';
+import { b2bExpressRoutes } from '@/routes/mpesa/b2bExpress.js';
+import { mpesaCoreRoutes } from '@/routes/mpesa/index.js';
+import { standingOrderRoutes } from '@/routes/mpesa/standingOrder.js';
+import { sasapayV1Routes } from '@/routes/sasapay/index.js';
+import { waasV2Routes } from '@/routes/sasapay/waas.js';
 
 const LOG_LEVELS: Record<string, string> = {
   CRITICAL: 'fatal',

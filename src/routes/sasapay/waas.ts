@@ -2,19 +2,19 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
-import { validateBasicAuth } from '../../auth/basic.js';
-import { validateBearerToken } from '../../auth/bearer.js';
-import { settings } from '../../config.js';
-import { DEFAULT_SASAPAY_CALLBACK } from '../../constants.js';
-import { db } from '../../db/client.js';
-import { PayloadError } from '../../errors.js';
-import { getMerchantByCode } from '../../actions/index.js';
+import { validateBasicAuth } from '@/auth/basic.js';
+import { validateBearerToken } from '@/auth/bearer.js';
+import { settings } from '@/config.js';
+import { DEFAULT_SASAPAY_CALLBACK } from '@/constants.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
+import { getMerchantByCode } from '@/actions/index.js';
 import {
   findWaasOnboardingByMerchantAndMobile,
   getWaasOnboardingByRequestId,
   insertWaasOnboardingRequest,
   updateWaasOnboardingStatus,
-} from '../../actions/waasQueries.js';
+} from '@/actions/waasQueries.js';
 import {
   BusinessConfirmationRequest,
   BusinessKycRequest,
@@ -22,14 +22,14 @@ import {
   PersonalConfirmationRequest,
   PersonalKycRequest,
   PersonalOnboardingRequest,
-} from '../../schemas/waas.js';
-import { decimalString, digitsString, nonEmptyStr, shortCodeStr } from '../../schemas/common.js';
-import { deliverCallback, scheduleCallback } from '../../services/callbacks.js';
-import { handleConfirmation } from '../../services/waasConfirmation.js';
-import { registerToken } from '../../services/tokens.js';
-import { enqueueBackgroundTask } from '../../utils/background.js';
-import { generateOtp, maskAccountNumber, maskMsisdn, maskValue } from '../../utils/waas.js';
-import { generateToken, uuid7 } from '../../utils/generators.js';
+} from '@/schemas/waas.js';
+import { decimalString, digitsString, nonEmptyStr, shortCodeStr } from '@/schemas/common.js';
+import { deliverCallback, scheduleCallback } from '@/services/callbacks.js';
+import { handleConfirmation } from '@/services/waasConfirmation.js';
+import { registerToken } from '@/services/tokens.js';
+import { enqueueBackgroundTask } from '@/utils/background.js';
+import { generateOtp, maskAccountNumber, maskMsisdn, maskValue } from '@/utils/waas.js';
+import { generateToken, uuid7 } from '@/utils/generators.js';
 import {
   BANKS,
   BUSINESS_TYPES,
@@ -40,9 +40,9 @@ import {
   SUB_INDUSTRIES,
   SUB_REGIONS,
   responsePayload,
-} from '../../utils/waasReferenceData.js';
-import { ensureOnboarded, ensureWallet, recordTransaction } from './waasWallet.js';
-import { pendingPayments } from '../stores.js';
+} from '@/utils/waasReferenceData.js';
+import { ensureOnboarded, ensureWallet, recordTransaction } from '@/routes/sasapay/waasWallet.js';
+import { pendingPayments } from '@/routes/stores.js';
 
 const bearer = { onRequest: validateBearerToken } as const;
 const isoNaive = (d: Date | null | undefined): string | null =>

@@ -1,8 +1,8 @@
 /** Basic auth validation. Mirrors validate_basic_auth in app/middleware/auth.py. */
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import { settings } from '../config.js';
-import { AuthenticationError } from '../errors.js';
+import { settings } from '@/config.js';
+import { AuthenticationError } from '@/errors.js';
 
 function pathOf(request: FastifyRequest): string {
   return request.url.split('?')[0] ?? request.url;

@@ -10,7 +10,7 @@ import {
   networkCodeStr,
   nonEmptyStr,
   shortCodeStr,
-} from './common.js';
+} from '@/schemas/common.js';
 
 export const AuthQuery = z
   .object({

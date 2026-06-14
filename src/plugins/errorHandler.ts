@@ -5,7 +5,7 @@ import {
   isResponseSerializationError,
 } from 'fastify-type-provider-zod';
 
-import { AppError } from '../errors.js';
+import { AppError } from '@/errors.js';
 
 export function registerErrorHandlers(app: FastifyInstance): void {
   app.setNotFoundHandler((_request, reply) => {

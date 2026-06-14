@@ -4,6 +4,7 @@ const TEST_DB_URL =
   process.env.TEST_DATABASE_URL ?? 'mysql://root:root@127.0.0.1:3307/pgw_mock_test';
 
 export default defineConfig({
+  resolve: { tsconfigPaths: true },
   test: {
     globals: true,
     environment: 'node',

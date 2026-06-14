@@ -1,8 +1,8 @@
 /** Shared test helpers: app instance, DB seeding, auth headers. */
 import type { FastifyInstance } from 'fastify';
 
-import { buildApp } from '../../src/server.js';
-import { db } from '../../src/db/client.js';
+import { buildApp } from '@/server.js';
+import { db } from '@/db/client.js';
 import {
   callbackDeliveries,
   merchants,
@@ -10,14 +10,14 @@ import {
   mockScenarios,
   transactions,
   waasOnboardingRequests,
-} from '../../src/db/schema.js';
+} from '@/db/schema.js';
 import {
   invoices,
   optIns,
   pendingPayments,
   standingOrders,
   walletLedger,
-} from '../../src/routes/stores.js';
+} from '@/routes/stores.js';
 
 // --- well-known codes (mirror tests/conftest.py) ---------------------------
 export const MPESA_TILL = '884000';

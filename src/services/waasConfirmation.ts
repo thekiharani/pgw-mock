@@ -1,11 +1,8 @@
 /** Shared OTP-confirmation handler for WaaS onboarding. Mirrors app/services/waas_confirmation.py. */
-import { getMerchantByCode } from '../actions/index.js';
-import {
-  getWaasOnboardingByRequestId,
-  updateWaasOnboardingStatus,
-} from '../actions/waasQueries.js';
-import { db } from '../db/client.js';
-import { PayloadError } from '../errors.js';
+import { getMerchantByCode } from '@/actions/index.js';
+import { getWaasOnboardingByRequestId, updateWaasOnboardingStatus } from '@/actions/waasQueries.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
 
 type OnboardingRecord = Awaited<ReturnType<typeof getWaasOnboardingByRequestId>>;
 

@@ -1,9 +1,9 @@
 /** Mirrors app/actions/mpesa_queries.py. */
 import { and, eq, sql } from 'drizzle-orm';
 
-import type { Executor } from '../db/client.js';
-import { merchants, transactions } from '../db/schema.js';
-import { insertTransaction } from './transactions.js';
+import type { Executor } from '@/db/client.js';
+import { merchants, transactions } from '@/db/schema.js';
+import { insertTransaction } from '@/actions/transactions.js';
 
 export { insertTransaction as insertMpesaTransaction };
 

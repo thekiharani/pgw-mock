@@ -2,9 +2,9 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { db } from '../src/db/client.js';
-import { merchants } from '../src/db/schema.js';
-import { flushBackgroundTasks } from '../src/utils/background.js';
+import { db } from '@/db/client.js';
+import { merchants } from '@/db/schema.js';
+import { flushBackgroundTasks } from '@/utils/background.js';
 import {
   BEARER,
   BROKE_MPESA_PAYBILL,
@@ -14,7 +14,7 @@ import {
   MPESA_TILL,
   get,
   post,
-} from './helpers/app.js';
+} from '@test/helpers/app.js';
 
 const auth = { authorization: BEARER };
 

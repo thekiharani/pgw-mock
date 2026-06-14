@@ -1,8 +1,8 @@
 /** Ports tests/test_routes_misc.py — home, oauth, mock admin, bill manager. */
 import { describe, expect, it } from 'vitest';
 
-import { flushBackgroundTasks } from '../src/utils/background.js';
-import { BASIC, BEARER, MPESA_PAYBILL, get, post } from './helpers/app.js';
+import { flushBackgroundTasks } from '@/utils/background.js';
+import { BASIC, BEARER, MPESA_PAYBILL, get, post } from '@test/helpers/app.js';
 
 describe('home + health', () => {
   it('GET / returns merchants and metadata', async () => {

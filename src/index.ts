@@ -1,6 +1,6 @@
 /** Entry point. Mirrors run.py. */
-import { settings } from './config.js';
-import { buildApp } from './server.js';
+import { settings } from '@/config.js';
+import { buildApp } from '@/server.js';
 
 const app = buildApp();
 

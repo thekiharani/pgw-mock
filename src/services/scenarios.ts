@@ -1,9 +1,9 @@
 /** Mirrors app/services/scenarios.py. */
 import { and, desc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm';
 
-import type { Executor } from '../db/client.js';
-import { mockScenarios } from '../db/schema.js';
-import { generateUlid } from '../utils/generators.js';
+import type { Executor } from '@/db/client.js';
+import { mockScenarios } from '@/db/schema.js';
+import { generateUlid } from '@/utils/generators.js';
 
 export interface ProviderResult {
   code: string;

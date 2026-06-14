@@ -1,11 +1,11 @@
 /** Mirrors app/routes/oauth.py. Registered at /oauth and mirrored under /mpesa/oauth. */
 import type { FastifyInstance } from 'fastify';
 
-import { validateBasicAuth } from '../auth/basic.js';
-import { db } from '../db/client.js';
-import { PayloadError } from '../errors.js';
-import { registerToken } from '../services/tokens.js';
-import { generateDarajaToken } from '../utils/generators.js';
+import { validateBasicAuth } from '@/auth/basic.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
+import { registerToken } from '@/services/tokens.js';
+import { generateDarajaToken } from '@/utils/generators.js';
 
 async function generate(grantType: string) {
   if (grantType !== 'client_credentials') {

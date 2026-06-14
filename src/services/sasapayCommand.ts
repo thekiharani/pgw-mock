@@ -5,14 +5,14 @@ import {
   applySasapayBalanceDelta,
   getMerchantBySasapayTill,
   insertSasapayTransaction,
-} from '../actions/sasapayQueries.js';
-import { DEFAULT_SASAPAY_CALLBACK } from '../constants.js';
-import { db } from '../db/client.js';
-import { PayloadError } from '../errors.js';
-import { scheduleCallback } from './callbacks.js';
-import { resolveSasapayResult } from './scenarios.js';
-import { PaymentsUtils } from '../utils/payments.js';
-import { generateUlid, uuid7 } from '../utils/generators.js';
+} from '@/actions/sasapayQueries.js';
+import { DEFAULT_SASAPAY_CALLBACK } from '@/constants.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
+import { scheduleCallback } from '@/services/callbacks.js';
+import { resolveSasapayResult } from '@/services/scenarios.js';
+import { PaymentsUtils } from '@/utils/payments.js';
+import { generateUlid, uuid7 } from '@/utils/generators.js';
 
 export function sasapayError(
   description: string,

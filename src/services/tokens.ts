@@ -1,9 +1,9 @@
 /** Mirrors app/services/tokens.py. */
 import { and, eq, gt, isNull } from 'drizzle-orm';
 
-import type { Executor } from '../db/client.js';
-import { mockAccessTokens } from '../db/schema.js';
-import { generateUlid } from '../utils/generators.js';
+import type { Executor } from '@/db/client.js';
+import { mockAccessTokens } from '@/db/schema.js';
+import { generateUlid } from '@/utils/generators.js';
 
 function isDarajaPath(path: string): boolean {
   return (

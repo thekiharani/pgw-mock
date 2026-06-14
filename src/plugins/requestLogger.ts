@@ -1,7 +1,7 @@
 /** Request/response logging. Mirrors the http middleware in app/main.py. */
 import type { FastifyInstance } from 'fastify';
 
-import { settings } from '../config.js';
+import { settings } from '@/config.js';
 
 declare module 'fastify' {
   interface FastifyRequest {

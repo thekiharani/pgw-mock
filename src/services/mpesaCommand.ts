@@ -4,19 +4,19 @@
  */
 import type { FastifyRequest } from 'fastify';
 
-import { settings } from '../config.js';
-import { db } from '../db/client.js';
-import { PayloadError } from '../errors.js';
+import { settings } from '@/config.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
 import {
   applyMpesaBalanceDelta,
   getMerchantByMpesaPaybill,
   insertMpesaTransaction,
-} from '../actions/mpesaQueries.js';
-import { scheduleCallback } from './callbacks.js';
-import { type Operation, enforceCapability } from './capabilities.js';
-import { isTimeoutResult, resolveMpesaResult } from './scenarios.js';
-import { PaymentsUtils } from '../utils/payments.js';
-import { generateUlid, uuid7 } from '../utils/generators.js';
+} from '@/actions/mpesaQueries.js';
+import { scheduleCallback } from '@/services/callbacks.js';
+import { type Operation, enforceCapability } from '@/services/capabilities.js';
+import { isTimeoutResult, resolveMpesaResult } from '@/services/scenarios.js';
+import { PaymentsUtils } from '@/utils/payments.js';
+import { generateUlid, uuid7 } from '@/utils/generators.js';
 
 export function mpesaError(
   description: string,

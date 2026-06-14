@@ -1,6 +1,6 @@
 /** Mirrors app/actions/transactions.py. */
-import type { Executor } from '../db/client.js';
-import { transactions } from '../db/schema.js';
+import type { Executor } from '@/db/client.js';
+import { transactions } from '@/db/schema.js';
 
 export interface TransactionData {
   id: string;

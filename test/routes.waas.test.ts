@@ -1,8 +1,8 @@
 /** Ports tests/test_routes_waas.py (broad coverage). */
 import { describe, expect, it } from 'vitest';
 
-import { flushBackgroundTasks } from '../src/utils/background.js';
-import { BASIC, BEARER_WAAS, SASAPAY_TILL, get, post } from './helpers/app.js';
+import { flushBackgroundTasks } from '@/utils/background.js';
+import { BASIC, BEARER_WAAS, SASAPAY_TILL, get, post } from '@test/helpers/app.js';
 
 const auth = { authorization: BEARER_WAAS };
 const W = '/sasapay/api/v2/waas';

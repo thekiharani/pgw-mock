@@ -5,7 +5,12 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2023"],
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@test/*": ["test/*"]
+    },
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,

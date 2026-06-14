@@ -1,15 +1,15 @@
 /** Daraja M-Pesa Ratiba (Standing Orders). Mirrors app/routes/mpesa/standing_order.py. */
 import type { FastifyInstance } from 'fastify';
 
-import { validateBearerToken } from '../../auth/bearer.js';
-import { db } from '../../db/client.js';
-import { PayloadError } from '../../errors.js';
-import { getMerchantByMpesaPaybill } from '../../actions/mpesaQueries.js';
-import { StandingOrderRequest } from '../../schemas/mpesa.js';
-import { scheduleCallback } from '../../services/callbacks.js';
-import { enforceCapability } from '../../services/capabilities.js';
-import { uuid7 } from '../../utils/generators.js';
-import { standingOrders } from '../stores.js';
+import { validateBearerToken } from '@/auth/bearer.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
+import { getMerchantByMpesaPaybill } from '@/actions/mpesaQueries.js';
+import { StandingOrderRequest } from '@/schemas/mpesa.js';
+import { scheduleCallback } from '@/services/callbacks.js';
+import { enforceCapability } from '@/services/capabilities.js';
+import { uuid7 } from '@/utils/generators.js';
+import { standingOrders } from '@/routes/stores.js';
 
 export async function standingOrderRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', validateBearerToken);

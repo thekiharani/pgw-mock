@@ -3,7 +3,7 @@ import { afterAll, beforeEach, vi } from 'vitest';
 
 // Silence outbound webhook HTTP calls (mirrors conftest _silence_webhooks).
 // Returns 200 so callback deliveries persist as DELIVERED.
-vi.mock('../../src/utils/webhooks.js', () => ({
+vi.mock('@/utils/webhooks.js', () => ({
   postWebhook: vi.fn(async (url: string) => ({
     message: `Webhook sent to ${url}`,
     status: 200,
@@ -12,7 +12,7 @@ vi.mock('../../src/utils/webhooks.js', () => ({
   })),
 }));
 
-const { seedDatabase, clearStores, closeApp } = await import('../helpers/app.js');
+const { seedDatabase, clearStores, closeApp } = await import('@test/helpers/app.js');
 
 beforeEach(async () => {
   await seedDatabase();

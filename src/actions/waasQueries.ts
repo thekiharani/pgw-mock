@@ -1,8 +1,8 @@
 /** Mirrors app/actions/waas_queries.py. */
 import { and, desc, eq, inArray, or } from 'drizzle-orm';
 
-import type { Executor } from '../db/client.js';
-import { waasOnboardingRequests } from '../db/schema.js';
+import type { Executor } from '@/db/client.js';
+import { waasOnboardingRequests } from '@/db/schema.js';
 
 export interface WaasOnboardingData {
   request_id: string;

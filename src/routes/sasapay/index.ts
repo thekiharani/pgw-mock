@@ -1,12 +1,12 @@
 /** SasaPay v1 routes. Mirrors app/routes/sasapay/* and router.py (prefix /sasapay/api/v1). */
 import type { FastifyInstance } from 'fastify';
 
-import { validateBasicAuth } from '../../auth/basic.js';
-import { validateBearerToken } from '../../auth/bearer.js';
-import { settings } from '../../config.js';
-import { DEFAULT_SASAPAY_CALLBACK, TRIGGER_FAILURE_AMOUNTS } from '../../constants.js';
-import { db } from '../../db/client.js';
-import { PayloadError } from '../../errors.js';
+import { validateBasicAuth } from '@/auth/basic.js';
+import { validateBearerToken } from '@/auth/bearer.js';
+import { settings } from '@/config.js';
+import { DEFAULT_SASAPAY_CALLBACK, TRIGGER_FAILURE_AMOUNTS } from '@/constants.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
 import {
   applySasapayBalanceDelta,
   getMerchantBySasapayTill,
@@ -14,7 +14,7 @@ import {
   getTransactionStatus,
   insertSasapayTransaction,
   updateSasapayTransaction,
-} from '../../actions/sasapayQueries.js';
+} from '@/actions/sasapayQueries.js';
 import {
   AccountVerifyRequest,
   AuthQuery,
@@ -24,14 +24,14 @@ import {
   C2BRequest,
   ProcessPaymentRequest,
   TransactionStatusRequest,
-} from '../../schemas/sasapay.js';
-import { deliverCallback, scheduleCallback } from '../../services/callbacks.js';
-import { type SasaPayCommandSpec, runSasapayCommand } from '../../services/sasapayCommand.js';
-import { resolveSasapayResult } from '../../services/scenarios.js';
-import { enqueueBackgroundTask } from '../../utils/background.js';
-import { generateToken, generateUlid, uuid7 } from '../../utils/generators.js';
-import { PaymentsUtils } from '../../utils/payments.js';
-import { registerToken } from '../../services/tokens.js';
+} from '@/schemas/sasapay.js';
+import { deliverCallback, scheduleCallback } from '@/services/callbacks.js';
+import { type SasaPayCommandSpec, runSasapayCommand } from '@/services/sasapayCommand.js';
+import { resolveSasapayResult } from '@/services/scenarios.js';
+import { enqueueBackgroundTask } from '@/utils/background.js';
+import { generateToken, generateUlid, uuid7 } from '@/utils/generators.js';
+import { PaymentsUtils } from '@/utils/payments.js';
+import { registerToken } from '@/services/tokens.js';
 
 const SASAPAY_WALLET_VERIFICATION_CODE = '1234';
 const SASAPAY_WALLET_OTP_TTL_MINUTES = 5;

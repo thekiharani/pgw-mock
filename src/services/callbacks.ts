@@ -2,11 +2,11 @@
 import { and, eq } from 'drizzle-orm';
 import type { FastifyRequest } from 'fastify';
 
-import { db } from '../db/client.js';
-import { callbackDeliveries } from '../db/schema.js';
-import { generateUlid } from '../utils/generators.js';
-import { enqueueBackgroundTask } from '../utils/background.js';
-import { postWebhook } from '../utils/webhooks.js';
+import { db } from '@/db/client.js';
+import { callbackDeliveries } from '@/db/schema.js';
+import { generateUlid } from '@/utils/generators.js';
+import { enqueueBackgroundTask } from '@/utils/background.js';
+import { postWebhook } from '@/utils/webhooks.js';
 
 export interface CallbackParams {
   provider: string;

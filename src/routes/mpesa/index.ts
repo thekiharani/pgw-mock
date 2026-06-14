@@ -1,10 +1,10 @@
 /** M-Pesa/Daraja core routes. Mirrors app/routes/mpesa/* and router.py. */
 import type { FastifyInstance } from 'fastify';
 
-import { validateBearerToken } from '../../auth/bearer.js';
-import { settings } from '../../config.js';
-import { db } from '../../db/client.js';
-import { PayloadError } from '../../errors.js';
+import { validateBearerToken } from '@/auth/bearer.js';
+import { settings } from '@/config.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
 import {
   applyMpesaBalanceDelta,
   getMerchantByMpesaPaybill,
@@ -13,7 +13,7 @@ import {
   getMpesaTransactionByCode,
   insertMpesaTransaction,
   updateMerchantMpesaMeta,
-} from '../../actions/mpesaQueries.js';
+} from '@/actions/mpesaQueries.js';
 import {
   AccountBalanceRequest,
   B2BRequest,
@@ -26,20 +26,20 @@ import {
   STKPushRequest,
   TaxRemitRequest,
   TransactionStatusRequest,
-} from '../../schemas/mpesa.js';
-import { deliverCallback, scheduleCallback } from '../../services/callbacks.js';
-import { enforceCapability } from '../../services/capabilities.js';
+} from '@/schemas/mpesa.js';
+import { deliverCallback, scheduleCallback } from '@/services/callbacks.js';
+import { enforceCapability } from '@/services/capabilities.js';
 import {
   type MpesaCommandSpec,
   mpesaError,
   mpesaResultEnvelope,
   runMpesaCommand,
-} from '../../services/mpesaCommand.js';
-import { isTimeoutResult, resolveMpesaResult } from '../../services/scenarios.js';
-import { enqueueBackgroundTask } from '../../utils/background.js';
-import { pyFloat } from '../../utils/format.js';
-import { generateUlid, uuid7 } from '../../utils/generators.js';
-import { PaymentsUtils } from '../../utils/payments.js';
+} from '@/services/mpesaCommand.js';
+import { isTimeoutResult, resolveMpesaResult } from '@/services/scenarios.js';
+import { enqueueBackgroundTask } from '@/utils/background.js';
+import { pyFloat } from '@/utils/format.js';
+import { generateUlid, uuid7 } from '@/utils/generators.js';
+import { PaymentsUtils } from '@/utils/payments.js';
 
 const sleep = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
 

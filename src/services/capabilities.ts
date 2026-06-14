@@ -11,7 +11,7 @@
  * `meta.mpesa.capabilities`. Missing values default to a PAYBILL with all three
  * capabilities so legacy/seed-less data keeps working.
  */
-import { PayloadError } from '../errors.js';
+import { PayloadError } from '@/errors.js';
 
 export type Capability = 'c2b' | 'b2c' | 'b2b';
 export type ShortcodeKind = 'TILL' | 'PAYBILL';

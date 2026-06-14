@@ -1,10 +1,10 @@
 /** Daraja B2B Express Checkout (USSD push). Mirrors app/routes/mpesa/b2b_express.py. */
 import type { FastifyInstance } from 'fastify';
 
-import { validateBearerToken } from '../../auth/bearer.js';
-import { B2BExpressCheckoutRequest } from '../../schemas/mpesa.js';
-import { scheduleCallback } from '../../services/callbacks.js';
-import { uuid7 } from '../../utils/generators.js';
+import { validateBearerToken } from '@/auth/bearer.js';
+import { B2BExpressCheckoutRequest } from '@/schemas/mpesa.js';
+import { scheduleCallback } from '@/services/callbacks.js';
+import { uuid7 } from '@/utils/generators.js';
 
 export async function b2bExpressRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', validateBearerToken);

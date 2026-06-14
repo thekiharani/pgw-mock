@@ -3,18 +3,18 @@ import { desc } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
-import { db } from '../db/client.js';
-import { callbackDeliveries } from '../db/schema.js';
-import { PayloadError } from '../errors.js';
-import { scheduleCallback } from '../services/callbacks.js';
+import { db } from '@/db/client.js';
+import { callbackDeliveries } from '@/db/schema.js';
+import { PayloadError } from '@/errors.js';
+import { scheduleCallback } from '@/services/callbacks.js';
 import {
   MPESA_RESULT_CATALOG,
   SASAPAY_RESULT_CATALOG,
   createScenario,
-} from '../services/scenarios.js';
-import { PaymentsUtils } from '../utils/payments.js';
-import { uuid7 } from '../utils/generators.js';
-import { invoices, optIns, standingOrders } from './stores.js';
+} from '@/services/scenarios.js';
+import { PaymentsUtils } from '@/utils/payments.js';
+import { uuid7 } from '@/utils/generators.js';
+import { invoices, optIns, standingOrders } from '@/routes/stores.js';
 
 const ScenarioRequest = z
   .object({

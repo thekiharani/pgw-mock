@@ -6,9 +6,9 @@ import {
   C2BSimulateRequest,
   STKPushRequest,
   StandingOrderRequest,
-} from '../src/schemas/mpesa.js';
-import { C2BRequest as SasaC2B } from '../src/schemas/sasapay.js';
-import { BusinessOnboardingRequest, PersonalOnboardingRequest } from '../src/schemas/waas.js';
+} from '@/schemas/mpesa.js';
+import { C2BRequest as SasaC2B } from '@/schemas/sasapay.js';
+import { BusinessOnboardingRequest, PersonalOnboardingRequest } from '@/schemas/waas.js';
 
 describe('STKPushRequest', () => {
   it('normalizes amount and accepts valid payload', () => {

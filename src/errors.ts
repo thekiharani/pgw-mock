@@ -1,5 +1,5 @@
 /** App-level exception layer. Mirrors app/exceptions.py. */
-import { uuid7 } from './utils/generators.js';
+import { uuid7 } from '@/utils/generators.js';
 
 function deriveMessage(payload: Record<string, any>, fallback: string): string {
   for (const key of [

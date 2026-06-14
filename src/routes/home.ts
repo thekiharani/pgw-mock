@@ -2,13 +2,13 @@
 import { sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 
-import { settings } from '../config.js';
-import { db } from '../db/client.js';
-import { DependencyUnavailableError } from '../errors.js';
-import { getMerchantByMpesaPaybill } from '../actions/mpesaQueries.js';
-import { getMerchantBySasapayTill } from '../actions/sasapayQueries.js';
-import { DateUtils } from '../utils/dateUtils.js';
-import { PaymentsUtils } from '../utils/payments.js';
+import { settings } from '@/config.js';
+import { db } from '@/db/client.js';
+import { DependencyUnavailableError } from '@/errors.js';
+import { getMerchantByMpesaPaybill } from '@/actions/mpesaQueries.js';
+import { getMerchantBySasapayTill } from '@/actions/sasapayQueries.js';
+import { DateUtils } from '@/utils/dateUtils.js';
+import { PaymentsUtils } from '@/utils/payments.js';
 
 function numericMerchant(row: Record<string, any> | null): Record<string, any> | null {
   if (!row) return null;

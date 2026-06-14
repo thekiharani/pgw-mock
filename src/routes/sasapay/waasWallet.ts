@@ -2,11 +2,11 @@
 import {
   findActiveWalletByAccountNumber,
   getWaasOnboardingByRequestId,
-} from '../../actions/waasQueries.js';
-import { db } from '../../db/client.js';
-import { PayloadError } from '../../errors.js';
-import { uuid7 } from '../../utils/generators.js';
-import { walletLedger, type WalletEntry } from '../stores.js';
+} from '@/actions/waasQueries.js';
+import { db } from '@/db/client.js';
+import { PayloadError } from '@/errors.js';
+import { uuid7 } from '@/utils/generators.js';
+import { walletLedger, type WalletEntry } from '@/routes/stores.js';
 
 export function ensureWallet(accountNumber: string): WalletEntry {
   let wallet = walletLedger.get(accountNumber);

@@ -1,10 +1,10 @@
 /** Bearer token validation. Mirrors validate_bearer_token in app/middleware/auth.py. */
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import { settings } from '../config.js';
-import { db } from '../db/client.js';
-import { AuthenticationError } from '../errors.js';
-import { isValidToken, providerFromPath, requiredScopeFromPath } from '../services/tokens.js';
+import { settings } from '@/config.js';
+import { db } from '@/db/client.js';
+import { AuthenticationError } from '@/errors.js';
+import { isValidToken, providerFromPath, requiredScopeFromPath } from '@/services/tokens.js';
 
 function pathOf(request: FastifyRequest): string {
   return request.url.split('?')[0] ?? request.url;

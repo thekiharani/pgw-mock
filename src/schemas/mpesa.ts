@@ -8,7 +8,7 @@ import {
   nonEmptyStr,
   normalizeNonEmpty,
   shortCodeStr,
-} from './common.js';
+} from '@/schemas/common.js';
 
 export const STK_TRANSACTION_TYPES = new Set(['CustomerPayBillOnline', 'CustomerBuyGoodsOnline']);
 export const C2B_COMMAND_IDS = new Set(['CustomerPayBillOnline', 'CustomerBuyGoodsOnline']);

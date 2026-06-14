@@ -7,11 +7,11 @@ import {
   generateUlid,
   preUuid,
   uuid7,
-} from '../src/utils/generators.js';
-import { DateUtils } from '../src/utils/dateUtils.js';
-import { PaymentsUtils } from '../src/utils/payments.js';
-import { generateOtp, maskAccountNumber, maskMsisdn, maskValue } from '../src/utils/waas.js';
-import { pyFloat } from '../src/utils/format.js';
+} from '@/utils/generators.js';
+import { DateUtils } from '@/utils/dateUtils.js';
+import { PaymentsUtils } from '@/utils/payments.js';
+import { generateOtp, maskAccountNumber, maskMsisdn, maskValue } from '@/utils/waas.js';
+import { pyFloat } from '@/utils/format.js';
 
 describe('generators', () => {
   it('generateUlid is lowercase 26 chars', () => {
