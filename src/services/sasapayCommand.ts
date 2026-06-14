@@ -1,4 +1,3 @@
-/** Shared scaffold for SasaPay outbound (B2C/B2B). Mirrors app/services/sasapay_command.py. */
 import type { FastifyRequest } from 'fastify';
 
 import {
@@ -12,7 +11,7 @@ import { PayloadError } from '@/errors.js';
 import { scheduleCallback } from '@/services/callbacks.js';
 import { resolveSasapayResult } from '@/services/scenarios.js';
 import { PaymentsUtils } from '@/utils/payments.js';
-import { generateUlid, uuid7 } from '@/utils/generators.js';
+import { uuid7 } from '@/utils/generators.js';
 
 export function sasapayError(
   description: string,
@@ -89,7 +88,7 @@ export async function runSasapayCommand(
   const ctx: SasaPayContext = {
     body,
     merchant,
-    transactionId: generateUlid(),
+    transactionId: uuid7(),
     transactionCode: PaymentsUtils.generateTransactionCode('SWEJ18'),
     thirdPartyTransactionCode: PaymentsUtils.generateTransactionCode(),
     checkoutRequestId: uuid7(),

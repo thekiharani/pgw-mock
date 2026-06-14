@@ -1,18 +1,10 @@
-/**
- * Shared validators / normalizers. Mirrors app/schemas/common.py.
- *
- * The normalize_* helpers throw ValueError-equivalent Errors with the SAME
- * messages as the Python implementation so validation output matches.
- */
 import { z } from 'zod';
 
 const DECIMAL_RE = /^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i;
 
-/** Expand a number to a plain (non-exponent) decimal string, trimming trailing zeros. */
 function plainDecimal(num: number): string {
   let s = String(num);
   if (s.includes('e') || s.includes('E')) {
-    // Expand scientific notation deterministically.
     s = num.toLocaleString('en-US', { useGrouping: false, maximumFractionDigits: 20 });
   }
   if (s.includes('.')) {
@@ -84,11 +76,6 @@ export function normalizeUpperToken(
   return raw;
 }
 
-// ---------------------------------------------------------------------------
-// Zod building blocks
-// ---------------------------------------------------------------------------
-
-/** Run a normalizer inside a Zod transform, surfacing its message as an issue. */
 function fromNormalizer<T>(fn: (v: unknown) => T) {
   return z.any().transform((val, ctx): T => {
     try {
@@ -141,14 +128,12 @@ export const emailStrLike = z
   .transform((v) => v.trim())
   .pipe(z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/));
 
-/** A decimal-string field accepting string|number, normalized like Pydantic. */
 export const decimalString = (fieldName: string, allowZero = false) =>
   fromNormalizer((v) => normalizeDecimalString(v, fieldName, allowZero));
 
 export const digitsString = (fieldName: string, min: number, max: number) =>
   fromNormalizer((v) => normalizeDigits(v, fieldName, min, max));
 
-/** HttpUrl equivalent — must parse as an absolute http(s) URL. */
 export const httpUrl = z
   .string()
   .transform((v) => v.trim())

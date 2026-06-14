@@ -1,4 +1,3 @@
-/** In-memory WaaS wallet ledger helpers. Mirrors app/routes/sasapay/waas/wallets.py internals. */
 import {
   findActiveWalletByAccountNumber,
   getWaasOnboardingByRequestId,

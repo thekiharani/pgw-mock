@@ -1,8 +1,7 @@
-/** Ports tests/test_routes_waas.py (broad coverage). */
 import { describe, expect, it } from 'vitest';
 
 import { flushBackgroundTasks } from '@/utils/background.js';
-import { BASIC, BEARER_WAAS, SASAPAY_TILL, get, post } from '@test/helpers/app.js';
+import { BASIC_SASAPAY, BEARER_WAAS, SASAPAY_TILL, get, post } from '@test/helpers/app.js';
 
 const auth = { authorization: BEARER_WAAS };
 const W = '/sasapay/api/v2/waas';
@@ -15,14 +14,14 @@ async function otpFor(requestId: string): Promise<string> {
 describe('waas auth + reference data', () => {
   it('issues a token', async () => {
     const { status, json } = await get(`${W}/auth/token/?grant_type=client_credentials`, {
-      authorization: BASIC,
+      authorization: BASIC_SASAPAY,
     });
     expect(status).toBe(200);
     expect(json.scope).toBe('onboarding kyc reference-data wallet payments');
     expect(json.access_token.split('.')).toHaveLength(3);
   });
 
-  it('countries / industries / business-types / products / banks', async () => {
+  it('returns countries, industries, business types, products, and banks', async () => {
     expect((await get(`${W}/countries/`, auth)).json.data[0].name).toBe('Kenya');
     expect((await get(`${W}/industries/`, auth)).json.data.length).toBe(4);
     expect((await get(`${W}/business-types/`, auth)).json.data.length).toBe(4);
@@ -44,7 +43,7 @@ describe('waas auth + reference data', () => {
 });
 
 describe('waas personal onboarding flow', () => {
-  it('onboard -> confirm -> kyc', async () => {
+  it('onboards, confirms, then completes KYC', async () => {
     const ob = await post(
       `${W}/personal-onboarding/`,
       {
@@ -97,7 +96,7 @@ describe('waas personal onboarding flow', () => {
 });
 
 describe('waas business onboarding + KYC', () => {
-  it('onboard -> confirm -> kyc with document validation', async () => {
+  it('onboards, confirms, then completes KYC with document validation', async () => {
     const ob = await post(
       `${W}/business-onboarding/`,
       {
@@ -153,7 +152,7 @@ describe('waas business onboarding + KYC', () => {
 });
 
 describe('waas onboarding request lookup', () => {
-  it('404 for unknown request', async () => {
+  it('returns 404 for an unknown request', async () => {
     const { status, json } = await get(`${W}/onboarding/requests/nope`, auth);
     expect(status).toBe(404);
     expect(json.message).toBe('Onboarding request not found');
@@ -177,7 +176,7 @@ describe('waas wallet + payments', () => {
     return mobile;
   }
 
-  it('topup then balance + statement', async () => {
+  it('tops up then returns balance and statement', async () => {
     const acct = await onboardedAccount('254700000001');
     const topup = await post(
       `${W}/wallets/transactions/topup/`,
@@ -193,7 +192,7 @@ describe('waas wallet + payments', () => {
     expect(stmt.json.data.transactions.length).toBe(1);
   });
 
-  it('send between accounts and reject insufficient', async () => {
+  it('sends between accounts and rejects insufficient balance', async () => {
     const sender = await onboardedAccount('254700000002');
     await post(
       `${W}/wallets/transactions/topup/`,
@@ -232,7 +231,7 @@ describe('waas wallet + payments', () => {
     expect(json.message).toContain('is not an active wallet');
   });
 
-  it('request-payment OTP then process-payment debits wallet', async () => {
+  it('issues an OTP on request-payment then debits the wallet on process-payment', async () => {
     const acct = await onboardedAccount('254700000004');
     await post(
       `${W}/wallets/transactions/topup/`,

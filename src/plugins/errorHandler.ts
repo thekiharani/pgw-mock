@@ -1,4 +1,3 @@
-/** Global error handlers. Mirrors the exception handlers in app/main.py. */
 import type { FastifyError, FastifyInstance } from 'fastify';
 import {
   hasZodFastifySchemaValidationErrors,
@@ -13,7 +12,6 @@ export function registerErrorHandlers(app: FastifyInstance): void {
   });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
-    // Request body/params/query validation failures (Zod type provider).
     if (hasZodFastifySchemaValidationErrors(error)) {
       request.log.warn(`Validation error on ${request.method} ${request.url}`);
       return reply.code(422).send({
@@ -37,7 +35,6 @@ export function registerErrorHandlers(app: FastifyInstance): void {
       return reply.code(error.statusCode).send(error.payload);
     }
 
-    // Fastify's own body parse / generic 4xx (e.g. malformed JSON).
     if (typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500) {
       return reply.code(error.statusCode).send({ status: false, message: error.message });
     }

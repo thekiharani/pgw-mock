@@ -1,4 +1,3 @@
-/** Shared test helpers: app instance, DB seeding, auth headers. */
 import type { FastifyInstance } from 'fastify';
 
 import { buildApp } from '@/server.js';
@@ -19,7 +18,6 @@ import {
   walletLedger,
 } from '@/routes/stores.js';
 
-// --- well-known codes (mirror tests/conftest.py) ---------------------------
 export const MPESA_TILL = '884000';
 export const MPESA_DISBURSEMENT_PAYBILL = '885000';
 export const MPESA_COLLECTION_PAYBILL = '886000';
@@ -34,7 +32,14 @@ export const TEST_TOKEN_SASAPAY_WAAS = 'testtoken-sasapay-waas';
 export const BEARER = `Bearer ${TEST_TOKEN_MPESA}`;
 export const BEARER_SASAPAY = `Bearer ${TEST_TOKEN_SASAPAY_V1}`;
 export const BEARER_WAAS = `Bearer ${TEST_TOKEN_SASAPAY_WAAS}`;
-export const BASIC = 'Basic ' + Buffer.from('test_client_id:test_client_secret').toString('base64');
+export const MPESA_CONSUMER_KEY = 'test_mpesa_key';
+export const MPESA_CONSUMER_SECRET = 'test_mpesa_secret';
+export const SASAPAY_CLIENT_ID = 'test_sasapay_id';
+export const SASAPAY_CLIENT_SECRET = 'test_sasapay_secret';
+export const BASIC_MPESA =
+  'Basic ' + Buffer.from(`${MPESA_CONSUMER_KEY}:${MPESA_CONSUMER_SECRET}`).toString('base64');
+export const BASIC_SASAPAY =
+  'Basic ' + Buffer.from(`${SASAPAY_CLIENT_ID}:${SASAPAY_CLIENT_SECRET}`).toString('base64');
 
 let app: FastifyInstance | null = null;
 
@@ -58,7 +63,6 @@ function plusOneHour(): Date {
 }
 
 export async function seedDatabase(): Promise<void> {
-  // Clear (respect FK order).
   await db.delete(callbackDeliveries);
   await db.delete(transactions);
   await db.delete(waasOnboardingRequests);
@@ -72,6 +76,8 @@ export async function seedDatabase(): Promise<void> {
       name: 'TEST MPESA MERCHANT',
       mpesaPaybillNumber: MPESA_PAYBILL,
       sasapayTillNumber: 'DUMMY_M001',
+      mpesaConsumerKey: MPESA_CONSUMER_KEY,
+      mpesaConsumerSecret: MPESA_CONSUMER_SECRET,
       mpesaBalance: '500000.00',
       sasapayBalance: '0.00',
       meta: { mpesa: { kind: 'PAYBILL', capabilities: ['c2b', 'b2c', 'b2b'] } },
@@ -108,6 +114,8 @@ export async function seedDatabase(): Promise<void> {
       name: 'TEST SASAPAY MERCHANT',
       mpesaPaybillNumber: 'DUMMY_S001',
       sasapayTillNumber: SASAPAY_TILL,
+      sasapayClientId: SASAPAY_CLIENT_ID,
+      sasapayClientSecret: SASAPAY_CLIENT_SECRET,
       mpesaBalance: '0.00',
       sasapayBalance: '500000.00',
       meta: { sasapay: { capabilities: ['c2b', 'b2c', 'b2b'] } },
@@ -169,7 +177,6 @@ export function clearStores(): void {
   pendingPayments.clear();
 }
 
-/** Convenience POST helper returning {status, json}. */
 export async function post(
   url: string,
   body: unknown,

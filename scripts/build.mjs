@@ -1,7 +1,3 @@
-// Bundles the app into a single ESM file at dist/index.js.
-// - resolves @/ aliases via tsconfig paths
-// - externalizes node_modules (deps load from node_modules at runtime)
-// - NO source maps, ever
 import { rmSync } from 'node:fs';
 import { build } from 'esbuild';
 

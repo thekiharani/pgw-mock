@@ -1,9 +1,8 @@
-/** Ports tests/test_routes_sasapay.py (broad coverage). */
 import { describe, expect, it } from 'vitest';
 
 import { flushBackgroundTasks } from '@/utils/background.js';
 import {
-  BASIC,
+  BASIC_SASAPAY,
   BEARER_SASAPAY,
   BROKE_SASAPAY_TILL,
   SASAPAY_TILL,
@@ -18,7 +17,7 @@ describe('sasapay auth token', () => {
     const { status, json } = await get(
       '/sasapay/api/v1/auth/token/?grant_type=client_credentials',
       {
-        authorization: BASIC,
+        authorization: BASIC_SASAPAY,
       },
     );
     expect(status).toBe(200);
@@ -30,6 +29,31 @@ describe('sasapay auth token', () => {
   it('requires basic auth', async () => {
     const { status } = await get('/sasapay/api/v1/auth/token/?grant_type=client_credentials');
     expect(status).toBe(401);
+  });
+
+  it('rejects incorrect client credentials', async () => {
+    const { status, json } = await get(
+      '/sasapay/api/v1/auth/token/?grant_type=client_credentials',
+      { authorization: 'Basic ' + Buffer.from('wrong_id:wrong_secret').toString('base64') },
+    );
+    expect(status).toBe(401);
+    expect(json.detail).toBe('Invalid client credentials');
+  });
+
+  it('rejects a missing grant_type', async () => {
+    const { status, json } = await get('/sasapay/api/v1/auth/token/', {
+      authorization: BASIC_SASAPAY,
+    });
+    expect(status).toBe(400);
+    expect(json.detail).toBe('Invalid grant_type. Expected client_credentials');
+  });
+
+  it('ignores unknown query params', async () => {
+    const { status } = await get(
+      '/sasapay/api/v1/auth/token/?grant_type=client_credentials&foo=bar',
+      { authorization: BASIC_SASAPAY },
+    );
+    expect(status).toBe(200);
   });
 });
 
@@ -56,7 +80,7 @@ describe('sasapay C2B', () => {
     expect(deliveries.some((d: any) => d.flow === 'c2b' && d.eventType === 'ipn')).toBe(true);
   });
 
-  it('invalid merchant', async () => {
+  it('rejects an invalid merchant', async () => {
     const { status, json } = await post(
       '/sasapay/api/v1/payments/request-payment/',
       c2b({ MerchantCode: '777777' }),
@@ -100,7 +124,7 @@ describe('sasapay C2B', () => {
     expect(again.json.ResponseDescription).toBe('Checkout request has already been processed');
   });
 
-  it('failure amount yields failed scenario', async () => {
+  it('reports a failed result for the failure amount', async () => {
     const { json } = await post(
       '/sasapay/api/v1/payments/request-payment/',
       c2b({ Amount: '11000' }),
@@ -115,7 +139,7 @@ describe('sasapay C2B', () => {
 });
 
 describe('sasapay B2C / B2B / bulk', () => {
-  it('b2c success', async () => {
+  it('completes a B2C payment', async () => {
     const { json } = await post(
       '/sasapay/api/v1/payments/b2c/',
       {
@@ -135,7 +159,7 @@ describe('sasapay B2C / B2B / bulk', () => {
     await flushBackgroundTasks();
   });
 
-  it('b2c insufficient funds on broke till', async () => {
+  it('rejects a B2C payment when the till has insufficient funds', async () => {
     const { status, json } = await post(
       '/sasapay/api/v1/payments/b2c/',
       {
@@ -154,7 +178,7 @@ describe('sasapay B2C / B2B / bulk', () => {
     expect(json.ResponseDescription).toBe('Insufficient Funds');
   });
 
-  it('b2b success', async () => {
+  it('completes a B2B payment', async () => {
     const { json } = await post(
       '/sasapay/api/v1/payments/b2b/',
       {
@@ -175,9 +199,9 @@ describe('sasapay B2C / B2B / bulk', () => {
     await flushBackgroundTasks();
   });
 
-  it('bulk success and insufficient', async () => {
+  it('processes a bulk payment and rejects one with insufficient funds', async () => {
     const ok = await post(
-      '/sasapay/api/v1/payments/bulk/',
+      '/sasapay/api/v1/payments/bulk-payments/',
       {
         MerchantCode: SASAPAY_TILL,
         MerchantTransactionReference: 'BULK1',
@@ -195,7 +219,7 @@ describe('sasapay B2C / B2B / bulk', () => {
     await flushBackgroundTasks();
 
     const broke = await post(
-      '/sasapay/api/v1/payments/bulk/',
+      '/sasapay/api/v1/payments/bulk-payments/',
       {
         MerchantCode: BROKE_SASAPAY_TILL,
         MerchantTransactionReference: 'BULK2',
@@ -211,7 +235,7 @@ describe('sasapay B2C / B2B / bulk', () => {
 });
 
 describe('sasapay status / channels / account verify', () => {
-  it('transaction status after a c2b', async () => {
+  it('returns the transaction status after a C2B payment', async () => {
     await post(
       '/sasapay/api/v1/payments/request-payment/',
       {
@@ -235,7 +259,7 @@ describe('sasapay status / channels / account verify', () => {
     expect(json.data.MerchantReference).toBe('STAT1');
   });
 
-  it('transaction status not found', async () => {
+  it('reports an unknown transaction as not found', async () => {
     const { status, json } = await post(
       '/sasapay/api/v1/transactions/status/',
       { MerchantCode: SASAPAY_TILL, TransactionCode: 'NOPE' },
@@ -245,15 +269,15 @@ describe('sasapay status / channels / account verify', () => {
     expect(json.message).toBe('Transaction does not exist');
   });
 
-  it('channels list', async () => {
-    const { json } = await get('/sasapay/api/v1/channels/', auth);
+  it('lists channel codes', async () => {
+    const { json } = await get('/sasapay/api/v1/payments/channel-codes/', auth);
     expect(json.responseCode).toBe('0');
     expect(json.data[0]).toEqual({ channelCode: '00', channelName: 'SasaPay' });
   });
 
-  it('account verify', async () => {
+  it('validates an account', async () => {
     const { json } = await post(
-      '/sasapay/api/v1/accounts/verify/',
+      '/sasapay/api/v1/accounts/account-validation/',
       { MerchantCode: SASAPAY_TILL, AccountNumber: '12345678', Channel: '63902' },
       auth,
     );

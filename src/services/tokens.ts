@@ -1,9 +1,8 @@
-/** Mirrors app/services/tokens.py. */
 import { and, eq, gt, isNull } from 'drizzle-orm';
 
 import type { Executor } from '@/db/client.js';
 import { mockAccessTokens } from '@/db/schema.js';
-import { generateUlid } from '@/utils/generators.js';
+import { uuid7 } from '@/utils/generators.js';
 
 function isDarajaPath(path: string): boolean {
   return (
@@ -54,7 +53,7 @@ export async function registerToken(
 ): Promise<void> {
   const expiresIn = opts.expiresIn ?? 3600;
   await exec.insert(mockAccessTokens).values({
-    id: generateUlid(),
+    id: uuid7(),
     provider: opts.provider,
     token,
     scope: opts.scope ?? '',

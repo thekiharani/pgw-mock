@@ -1,10 +1,9 @@
-/** Mirrors app/services/callbacks.py. */
 import { and, eq } from 'drizzle-orm';
 import type { FastifyRequest } from 'fastify';
 
 import { db } from '@/db/client.js';
 import { callbackDeliveries } from '@/db/schema.js';
-import { generateUlid } from '@/utils/generators.js';
+import { uuid7 } from '@/utils/generators.js';
 import { enqueueBackgroundTask } from '@/utils/background.js';
 import { postWebhook } from '@/utils/webhooks.js';
 
@@ -17,7 +16,6 @@ export interface CallbackParams {
   transactionId?: string | null;
 }
 
-/** Enqueue a callback to be delivered after the response is sent. */
 export function scheduleCallback(request: FastifyRequest, params: CallbackParams): void {
   enqueueBackgroundTask(request, () => deliverCallback(params));
 }
@@ -51,7 +49,7 @@ export async function deliverCallback(params: CallbackParams): Promise<Record<st
     }
   }
 
-  const deliveryId = generateUlid();
+  const deliveryId = uuid7();
   await db.insert(callbackDeliveries).values({
     id: deliveryId,
     provider,

@@ -1,27 +1,28 @@
-/** Daraja Bill Manager. Mirrors app/routes/bill_manager.py. Mounted at /v1/billmanager-invoice. */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import { invoices, optIns } from '@/routes/stores.js';
 
-function jsonBody(request: FastifyRequest): Record<string, any> {
+type Body = Record<string, unknown>;
+
+function jsonBody(request: FastifyRequest): Body {
   const ct = request.headers['content-type'] ?? '';
   if (ct.includes('application/json') && request.body && typeof request.body === 'object') {
-    return request.body as Record<string, any>;
+    return request.body as Body;
   }
   return {};
 }
 
-function invoiceNumberOf(body: Record<string, any>): string | null {
+function invoiceNumberOf(body: Body): string | null {
   const value =
     body.invoiceNumber || body.InvoiceNumber || body.billReferenceNumber || body.externalReference;
   return value ? String(value).trim() : null;
 }
 
-function amountOf(body: Record<string, any>): any {
+function amountOf(body: Body): unknown {
   return body.amount ?? body.Amount ?? body.invoiceAmount ?? null;
 }
 
-function shortcodeOf(body: Record<string, any>): string | null {
+function shortcodeOf(body: Body): string | null {
   const value = body.shortcode || body.ShortCode || body.shortCode;
   return value ? String(value).trim() : null;
 }
@@ -47,30 +48,6 @@ export async function billManagerRoutes(app: FastifyInstance): Promise<void> {
     return { app_status_code: 200, rescode: '200', resmsg: 'Success' };
   });
 
-  app.post('/change-billing-info', async (request) => {
-    const body = jsonBody(request);
-    const sc = shortcodeOf(body);
-    if (!sc || !optIns.has(sc)) {
-      return { app_status_code: 404, rescode: '404', resmsg: 'Shortcode not opted-in' };
-    }
-    const entry = optIns.get(sc)!;
-    entry.billing_info = { ...(entry.billing_info ?? {}), ...body };
-    return { app_status_code: 200, rescode: '200', resmsg: 'Success' };
-  });
-
-  app.post('/invoices/create', async (request) => {
-    const body = jsonBody(request);
-    const invoiceNumber = invoiceNumberOf(body);
-    if (!invoiceNumber || amountOf(body) === null) {
-      return { rescode: '400', resmsg: 'invoiceNumber and amount are required.' };
-    }
-    if (invoices.has(invoiceNumber)) {
-      return { rescode: '409', resmsg: 'Invoice already exists.', invoiceNumber };
-    }
-    invoices.set(invoiceNumber, { ...body, invoiceNumber, status: 'CREATED' });
-    return { rescode: '0', resmsg: 'Invoice created successfully.', invoiceNumber };
-  });
-
   app.post('/single-invoicing', async (request) => {
     const body = jsonBody(request);
     const invoiceNumber = invoiceNumberOf(body);
@@ -94,13 +71,14 @@ export async function billManagerRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/bulk-invoicing', async (request) => {
     const body = jsonBody(request);
-    const list = body.invoices ?? [];
-    if (!Array.isArray(list) || list.length === 0) {
+    const list: unknown[] = Array.isArray(body.invoices) ? body.invoices : [];
+    if (list.length === 0) {
       return { Status_Code: 400, Status: 'Failed', Message: 'invoices array is required.' };
     }
     const accepted: string[] = [];
-    for (const inv of list) {
-      if (!inv || typeof inv !== 'object') continue;
+    for (const item of list) {
+      if (!item || typeof item !== 'object') continue;
+      const inv = item as Body;
       const invoiceNumber = invoiceNumberOf(inv);
       if (!invoiceNumber || amountOf(inv) === null) continue;
       invoices.set(invoiceNumber, { ...inv, invoiceNumber, status: 'ISSUED' });
@@ -114,7 +92,7 @@ export async function billManagerRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  app.post('/invoices/update', async (request) => {
+  app.post('/change-invoice', async (request) => {
     const body = jsonBody(request);
     const invoiceNumber = invoiceNumberOf(body);
     if (!invoiceNumber || !invoices.has(invoiceNumber)) {
@@ -129,7 +107,38 @@ export async function billManagerRoutes(app: FastifyInstance): Promise<void> {
     return { rescode: '0', resmsg: 'Invoice updated successfully.', invoiceNumber };
   });
 
-  const cancelHandler = async (request: FastifyRequest) => {
+  app.post('/change-invoices', async (request) => {
+    const body = jsonBody(request);
+    const list: unknown[] = Array.isArray(body.invoices) ? body.invoices : [];
+    if (list.length === 0) {
+      return { Status_Code: 400, Status: 'Failed', Message: 'invoices array is required.' };
+    }
+    const updated: string[] = [];
+    const notFound: string[] = [];
+    for (const item of list) {
+      if (!item || typeof item !== 'object') continue;
+      const inv = item as Body;
+      const invoiceNumber = invoiceNumberOf(inv);
+      if (!invoiceNumber || !invoices.has(invoiceNumber)) {
+        if (invoiceNumber) notFound.push(invoiceNumber);
+        continue;
+      }
+      const invoice = invoices.get(invoiceNumber)!;
+      if (invoice.status === 'CANCELLED') continue;
+      Object.assign(invoice, inv);
+      invoice.status = 'UPDATED';
+      updated.push(invoiceNumber);
+    }
+    return {
+      Status_Code: updated.length ? 200 : 400,
+      Status: updated.length ? 'Success' : 'Failed',
+      Message: `${updated.length} invoices updated.`,
+      updatedInvoices: updated,
+      notFound,
+    };
+  });
+
+  app.post('/cancel-single-invoice', async (request) => {
     const body = jsonBody(request);
     const invoiceNumber = invoiceNumberOf(body);
     if (!invoiceNumber || !invoices.has(invoiceNumber)) {
@@ -141,19 +150,18 @@ export async function billManagerRoutes(app: FastifyInstance): Promise<void> {
     }
     invoice.status = 'CANCELLED';
     return { rescode: '0', resmsg: 'Invoice cancelled successfully.', invoiceNumber };
-  };
-  app.post('/invoices/cancel', cancelHandler);
-  app.post('/cancel-single-invoice', cancelHandler);
+  });
 
-  app.post('/bulk-cancel-invoice', async (request) => {
+  app.post('/cancel-bulk-invoice', async (request) => {
     const body = jsonBody(request);
-    const list = body.invoices ?? body.externalReferences ?? [];
+    const source = body.invoices ?? body.externalReferences;
+    const list: unknown[] = Array.isArray(source) ? source : [];
     const cancelled: string[] = [];
     const notFound: string[] = [];
-    for (const raw of Array.isArray(list) ? list : []) {
+    for (const raw of list) {
       const ref =
         raw && typeof raw === 'object'
-          ? raw.externalReference || raw.invoiceNumber
+          ? String((raw as Body).externalReference ?? (raw as Body).invoiceNumber ?? '').trim()
           : String(raw).trim();
       if (!ref) continue;
       if (invoices.has(ref)) {
@@ -171,22 +179,7 @@ export async function billManagerRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  app.post('/invoices/status', async (request) => {
-    const body = jsonBody(request);
-    const invoiceNumber = invoiceNumberOf(body);
-    const invoice = invoices.get(invoiceNumber ?? '');
-    if (!invoice) {
-      return { rescode: '404', resmsg: 'Invoice not found.', invoiceNumber };
-    }
-    return {
-      rescode: '0',
-      resmsg: 'Invoice status fetched successfully.',
-      invoiceNumber,
-      status: invoice.status,
-    };
-  });
-
-  app.post('/payments-reconciliation', async (request) => {
+  app.post('/reconciliation', async (request) => {
     const body = jsonBody(request);
     return {
       Status_Code: 200,
@@ -194,13 +187,5 @@ export async function billManagerRoutes(app: FastifyInstance): Promise<void> {
       Message: 'Reconciliation acknowledged.',
       echo: body,
     };
-  });
-
-  // Permissive fallback so undocumented Bill Manager paths don't 404 in dev.
-  app.post('/*', async (request) => {
-    const body = jsonBody(request);
-    const path = (request.params as Record<string, string>)['*'];
-    app.log.info(`Bill Manager fallback received: /${path} body=${JSON.stringify(body)}`);
-    return { rescode: '0', resmsg: 'Request received successfully.' };
   });
 }

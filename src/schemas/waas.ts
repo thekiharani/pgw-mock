@@ -1,4 +1,3 @@
-/** SasaPay WaaS request schemas. Mirrors app/schemas/waas.py. */
 import { z } from 'zod';
 
 import {
@@ -18,7 +17,6 @@ import {
   VALID_SUB_REGION_IDS,
 } from '@/utils/waasReferenceData.js';
 
-/** Optional lookup-id field validated against a set; returns number|null. */
 function lookupId(validIds: Set<number>, fieldName: string) {
   return z
     .union([z.string(), z.number(), z.null()])
@@ -28,7 +26,6 @@ function lookupId(validIds: Set<number>, fieldName: string) {
       const raw = String(v).trim();
       const parsed = Number.parseInt(raw, 10);
       if (raw === '' || Number.isNaN(parsed) || String(parsed) !== raw.replace(/^\+/, '')) {
-        // mirror int(str(value).strip()) — reject non-integers
         if (!/^[+-]?\d+$/.test(raw)) {
           ctx.addIssue({ code: 'custom', message: `${fieldName} must be a valid lookup id` });
           return z.NEVER;
@@ -228,7 +225,7 @@ function decimalImpl(v: unknown, field: string, allowZero: boolean): string {
   return s;
 }
 
-void decimalString; // (kept import parity with common helpers)
+void decimalString;
 
 export type PersonalOnboardingBody = z.infer<typeof PersonalOnboardingRequest>;
 export type PersonalConfirmationBody = z.infer<typeof PersonalConfirmationRequest>;

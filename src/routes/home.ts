@@ -1,4 +1,3 @@
-/** Mirrors app/routes/home.py. */
 import { sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 

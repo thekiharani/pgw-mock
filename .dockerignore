@@ -1,43 +1,34 @@
-# Keep the build context minimal — the Dockerfile copies only package.json,
-# pnpm-lock.yaml, tsconfig.json, scripts/, src/, db/, and entrypoint.sh.
-
-# Dependencies & build output (installed/built inside the image)
 node_modules
 .pnpm-store
 dist
+prod
 *.tsbuildinfo
 drizzle
 
-# VCS & CI
 .git
 .gitignore
 .github
 
-# Environment / secrets
 .env
 .env.*
 
-# Tests & coverage (not needed at runtime)
 test
 coverage
 .vitest
 vitest.config.ts
 tsconfig.check.json
 
-# Tooling configs not needed in the image
 eslint.config.js
 .prettierrc.json
 .prettierignore
 .editorconfig
 
-# Docs & compose
 README.md
 *.md
 compose.yml
 .dockerignore
 Dockerfile
 
-# Logs, caches, editors, OS
 *.log
 logs
 .cache

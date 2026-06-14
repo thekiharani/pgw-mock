@@ -1,10 +1,30 @@
 services:
+  migrate:
+    build:
+      context: .
+      target: migrator
+    image: ghcr.io/norialabs/pgw-mock-migrate:${IMAGE_TAG:-latest}
+    container_name: noria-pgw-mock-migrate
+    restart: 'no'
+    environment:
+      DATABASE_URL: 'mysql://${DB_USER:-admin_444888}:${DB_PASSWORD:-pass_444888}@noria_mysql:3306/${DB_NAME:-pgw_mock}'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - norialabs
+
   pgw-mock:
-    build: .
+    build:
+      context: .
+      target: runtime
     image: ghcr.io/norialabs/pgw-mock:${IMAGE_TAG:-latest}
     container_name: noria-pgw-mock
     restart: unless-stopped
-    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
@@ -16,17 +36,12 @@ services:
       STRICT_PROVIDER_AUTH: ${STRICT_PROVIDER_AUTH:-true}
       STRICT_PROVIDER_VALIDATION: ${STRICT_PROVIDER_VALIDATION:-true}
       RELAXED_WAAS_KYC: ${RELAXED_WAAS_KYC:-false}
-      # Reuse the existing MySQL container on the shared `norialabs` network
-      # (resolved by container name, port 3306 in-network) — do not start our own.
-      # Literals here so the host-oriented .env (127.0.0.1:3326) does not leak in.
       DATABASE_URL: ''
       DB_HOST: noria_mysql
       DB_PORT: '3306'
       DB_USER: ${DB_USER:-admin_444888}
       DB_PASSWORD: ${DB_PASSWORD:-pass_444888}
       DB_NAME: ${DB_NAME:-pgw_mock}
-      RUN_MIGRATIONS: 'true'
-      WAIT_FOR_DB: 'true'
     ports:
       - '${HOST_PORT:-4102}:4002'
     read_only: true

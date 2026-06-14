@@ -1,4 +1,3 @@
-/** Mirrors app/utils/webhooks.py. */
 import { settings } from '@/config.js';
 
 const log = console;

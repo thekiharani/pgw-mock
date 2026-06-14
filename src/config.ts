@@ -1,19 +1,8 @@
-/**
- * Environment-backed settings. Mirrors app/config.py.
- *
- * Precedence for the DB connection string matches the Python app:
- *   - if DATABASE_URL is set, it is used (any "+driver" suffix is stripped so
- *     mysql2 accepts it, e.g. "mysql+aiomysql://" -> "mysql://");
- *   - otherwise the URL is assembled from DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME.
- */
-
-// Load .env into process.env (Node does not do this automatically). Tests and
-// alternative entrypoints can set DOTENV_CONFIG_PATH or pre-populate env.
 try {
   const path = process.env.DOTENV_CONFIG_PATH ?? '.env';
   process.loadEnvFile(path);
 } catch {
-  // No .env file — rely on process.env / defaults.
+  // no .env file is fine
 }
 
 function envStr(key: string, fallback: string): string {
@@ -61,10 +50,6 @@ export interface Settings {
   RELAXED_WAAS_KYC: boolean;
   STRICT_PROVIDER_AUTH: boolean;
   STRICT_PROVIDER_VALIDATION: boolean;
-  SASAPAY_CLIENT_ID: string | null;
-  SASAPAY_CLIENT_SECRET: string | null;
-  MPESA_CONSUMER_KEY: string | null;
-  MPESA_CONSUMER_SECRET: string | null;
   MPESA_PASSKEY: string | null;
   MPESA_SECURITY_CREDENTIAL: string | null;
   MPESA_INITIATOR_NAME: string | null;
@@ -76,7 +61,6 @@ export interface Settings {
   DB_PASSWORD: string;
   DB_NAME: string;
   DB_CONNECTION_LIMIT: number;
-  /** mysql2-compatible connection URI (no "+driver" suffix). */
   readonly databaseUrl: string;
 }
 
@@ -103,10 +87,6 @@ function buildSettings(): Settings {
     RELAXED_WAAS_KYC: envBool('RELAXED_WAAS_KYC', false),
     STRICT_PROVIDER_AUTH: envBool('STRICT_PROVIDER_AUTH', true),
     STRICT_PROVIDER_VALIDATION: envBool('STRICT_PROVIDER_VALIDATION', true),
-    SASAPAY_CLIENT_ID: envOptional('SASAPAY_CLIENT_ID'),
-    SASAPAY_CLIENT_SECRET: envOptional('SASAPAY_CLIENT_SECRET'),
-    MPESA_CONSUMER_KEY: envOptional('MPESA_CONSUMER_KEY'),
-    MPESA_CONSUMER_SECRET: envOptional('MPESA_CONSUMER_SECRET'),
     MPESA_PASSKEY: envOptional('MPESA_PASSKEY'),
     MPESA_SECURITY_CREDENTIAL: envOptional('MPESA_SECURITY_CREDENTIAL'),
     MPESA_INITIATOR_NAME: envOptional('MPESA_INITIATOR_NAME'),
@@ -120,7 +100,6 @@ function buildSettings(): Settings {
     DB_CONNECTION_LIMIT: envInt('DB_CONNECTION_LIMIT', 10),
     get databaseUrl(): string {
       if (DATABASE_URL) {
-        // Strip SQLAlchemy-style "+driver" so the URL is mysql2/dbmate friendly.
         return DATABASE_URL.replace(/^([a-z]+)\+[a-z0-9]+:\/\//i, '$1://');
       }
       const pwd = encodeURIComponent(DB_PASSWORD);

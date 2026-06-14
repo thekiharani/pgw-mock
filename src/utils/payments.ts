@@ -1,4 +1,3 @@
-/** Mirrors app/utils/payments.py (PaymentsUtils). */
 import { createHash } from 'node:crypto';
 
 import { DateUtils } from '@/utils/dateUtils.js';
@@ -123,7 +122,6 @@ export const PaymentsUtils = {
     return randInt(minVal, maxVal);
   },
 
-  /** Timestamp with milliseconds: %Y%m%d%H%M%S + zero-padded ms. */
   generateTimestamp(date?: Date): string {
     const now = date ?? new Date();
     const pad = (n: number, w: number) => String(n).padStart(w, '0');

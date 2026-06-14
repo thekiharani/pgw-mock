@@ -1,16 +1,3 @@
-/**
- * M-Pesa shortcode capability model.
- *
- * A shortcode has:
- *   - a `kind`: "TILL" (Buy Goods) or "PAYBILL" (Pay Bill) — this drives the
- *     valid STK TransactionType / C2B CommandID pairing.
- *   - a `capabilities` bundle: any non-empty subset of {"c2b", "b2c", "b2b"}.
- *     One shortcode can bundle 1, 2 or all 3.
- *
- * Storage: each Merchant row carries `meta.mpesa.kind` and
- * `meta.mpesa.capabilities`. Missing values default to a PAYBILL with all three
- * capabilities so legacy/seed-less data keeps working.
- */
 import { PayloadError } from '@/errors.js';
 
 export type Capability = 'c2b' | 'b2c' | 'b2b';
@@ -33,12 +20,6 @@ export type Operation =
   | 'account_balance'
   | 'qr_code';
 
-/**
- * Capability required to run each operation. `null` means any onboarded
- * shortcode may run it (status/balance queries). An array means the shortcode
- * needs at least one of the listed capabilities (reversal reverses an outbound
- * disbursement, so it needs b2c or b2b).
- */
 const OPERATION_REQUIRES: Record<Operation, Capability | Capability[] | null> = {
   stk_push: 'c2b',
   c2b_simulate: 'c2b',
@@ -51,7 +32,6 @@ const OPERATION_REQUIRES: Record<Operation, Capability | Capability[] | null> = 
   account_balance: null,
 };
 
-// STK TransactionType / C2B CommandID must pair with the shortcode kind.
 const STK_TX_TYPE_BY_KIND: Record<ShortcodeKind, Set<string>> = {
   TILL: new Set(['CustomerBuyGoodsOnline']),
   PAYBILL: new Set(['CustomerPayBillOnline']),
@@ -89,11 +69,6 @@ function darajaError(
   return payload;
 }
 
-/**
- * Validate the merchant's capabilities/kind can run the given operation.
- * Returns the resolved shortcode kind. Raises PayloadError (HTTP 400) with a
- * Daraja-shaped envelope on mismatch.
- */
 export function enforceCapability(
   merchant: Record<string, any>,
   operation: Operation,

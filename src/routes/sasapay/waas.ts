@@ -1,9 +1,9 @@
-/** SasaPay WaaS v2 routes. Mirrors app/routes/sasapay/waas/* (prefix /sasapay/api/v2/waas). */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import { validateBasicAuth } from '@/auth/basic.js';
 import { validateBearerToken } from '@/auth/bearer.js';
+import { requireClientCredentialsGrant } from '@/auth/grant.js';
 import { settings } from '@/config.js';
 import { DEFAULT_SASAPAY_CALLBACK } from '@/constants.js';
 import { db } from '@/db/client.js';
@@ -56,7 +56,6 @@ const isoNaive = (d: Date | null | undefined): string | null =>
 const WAAS_VERIFICATION_CODE = '1234';
 const WAAS_VERIFICATION_TTL_MINUTES = 5;
 
-// --- wallet/payment request schemas (defined inline in Python route files) ---
 const optionalDigits = (min: number, max: number) =>
   z
     .union([z.string(), z.number(), z.null()])
@@ -159,22 +158,16 @@ function paymentReference(body: any): string {
 }
 
 export async function waasV2Routes(app: FastifyInstance): Promise<void> {
-  // --- Access token (basic auth) ----------------------------------------
   app.get('/auth/token/', { onRequest: validateBasicAuth }, async (request) => {
-    const grantType = (request.query as Record<string, any>).grant_type ?? '';
-    if (grantType !== 'client_credentials') {
-      throw new PayloadError({
-        statusCode: 400,
-        payload: {
-          status: false,
-          responseCode: '400',
-          detail: 'Invalid grant_type. Expected client_credentials',
-        },
-      });
-    }
+    requireClientCredentialsGrant(request, 'sasapay');
     const scope = 'onboarding kyc reference-data wallet payments';
-    const token = await generateToken();
-    await registerToken(db, token, { provider: 'sasapay-waas', expiresIn: 3600, scope });
+    const token = await generateToken(request.authMerchantId);
+    await registerToken(db, token, {
+      provider: 'sasapay-waas',
+      expiresIn: 3600,
+      scope,
+      meta: { merchantId: request.authMerchantId ?? null },
+    });
     return {
       status: true,
       responseCode: '0',
@@ -186,7 +179,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // --- Reference data ----------------------------------------------------
   app.get('/countries/', bearer, async () =>
     responsePayload('Countries fetched successfully.', COUNTRIES),
   );
@@ -235,7 +227,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
   );
   app.get('/banks/', bearer, async () => responsePayload('Banks fetched successfully.', BANKS));
 
-  // --- Personal onboarding ----------------------------------------------
   app.post(
     '/personal-onboarding/',
     { ...bearer, schema: { body: PersonalOnboardingRequest } },
@@ -287,7 +278,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Personal confirmation --------------------------------------------
   app.post(
     '/personal-onboarding/confirmation/',
     { ...bearer, schema: { body: PersonalConfirmationRequest } },
@@ -319,7 +309,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Personal KYC ------------------------------------------------------
   app.post(
     '/personal-onboarding/kyc/',
     { ...bearer, schema: { body: PersonalKycRequest } },
@@ -375,7 +364,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Business onboarding ----------------------------------------------
   app.post(
     '/business-onboarding/',
     { ...bearer, schema: { body: BusinessOnboardingRequest } },
@@ -426,7 +414,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Business confirmation --------------------------------------------
   app.post(
     '/business-onboarding/confirmation/',
     { ...bearer, schema: { body: BusinessConfirmationRequest } },
@@ -456,7 +443,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Business KYC ------------------------------------------------------
   app.post(
     '/business-onboarding/kyc/',
     { ...bearer, schema: { body: BusinessKycRequest } },
@@ -513,7 +499,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Onboarding request lookup ----------------------------------------
   app.get('/onboarding/requests/:request_id', bearer, async (request) => {
     const requestId = String((request.params as Record<string, string>).request_id);
     const includeOtp = ['1', 'true', 'yes'].includes(
@@ -544,7 +529,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     return { status: true, responseCode: '0', message: 'Onboarding request found', data };
   });
 
-  // --- Wallet balance / statement / send / topup ------------------------
   app.get('/wallets/:account_number/balance/', bearer, async (request) => {
     const accountNumber = String((request.params as Record<string, string>).account_number);
     await ensureOnboarded(accountNumber);
@@ -646,7 +630,6 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- WaaS payments -----------------------------------------------------
   app.post(
     '/payments/request-payment/',
     { ...bearer, schema: { body: WaasRequestPaymentRequest } },
@@ -881,6 +864,76 @@ export async function waasV2Routes(app: FastifyInstance): Promise<void> {
         senderBalanceAfter: senderWallet.balance,
       });
     },
+  );
+
+  // Official WaaS endpoints. Methods + GET query params are taken from the SDK
+  // (SasaPayClient WaaS methods); bodies validate the merchantCode the SDK sends
+  // and pass the rest through. Responses are generic envelopes pending the docs.
+  const WaasMerchantBody = z.object({ merchantCode: shortCodeStr }).passthrough();
+  const WaasReferenceBody = z.object({}).passthrough();
+  const WaasMerchantBalanceQuery = z.object({ merchantCode: shortCodeStr });
+  const WaasNearestAgentQuery = z.object({ Longitude: nonEmptyStr(), Latitude: nonEmptyStr() });
+  const WaasPassthroughQuery = z.object({}).passthrough();
+
+  app.get('/customers/', { ...bearer, schema: { querystring: WaasPassthroughQuery } }, async () =>
+    responsePayload('Customers fetched successfully.', []),
+  );
+  app.post('/customer-details/', { ...bearer, schema: { body: WaasMerchantBody } }, async () =>
+    responsePayload('Customer details fetched successfully.', []),
+  );
+  app.post(
+    '/customer-details/update/',
+    { ...bearer, schema: { body: WaasMerchantBody } },
+    async () => responsePayload('Customer details updated successfully.', []),
+  );
+  app.post('/sub-wallets/', { ...bearer, schema: { body: WaasMerchantBody } }, async () =>
+    responsePayload('Sub-wallet created successfully.', []),
+  );
+  app.get(
+    '/transactions/',
+    { ...bearer, schema: { querystring: WaasPassthroughQuery } },
+    async () => responsePayload('Transactions fetched successfully.', []),
+  );
+  app.post('/transactions/status/', { ...bearer, schema: { body: WaasReferenceBody } }, async () =>
+    responsePayload('Transaction status fetched successfully.', []),
+  );
+  app.post('/transactions/verify/', { ...bearer, schema: { body: WaasReferenceBody } }, async () =>
+    responsePayload('Transaction verified successfully.', []),
+  );
+  app.get(
+    '/merchant-balances/',
+    { ...bearer, schema: { querystring: WaasMerchantBalanceQuery } },
+    async (request) => {
+      const { merchantCode } = request.query as { merchantCode: string };
+      return {
+        status: true,
+        responseCode: '0',
+        message: 'Merchant balances fetched successfully.',
+        merchantCode,
+        data: [],
+      };
+    },
+  );
+  app.get('/channel-codes/', bearer, async () =>
+    responsePayload('Channel codes fetched successfully.', []),
+  );
+  app.get(
+    '/nearest-agent/',
+    { ...bearer, schema: { querystring: WaasNearestAgentQuery } },
+    async (request) => {
+      const { Longitude, Latitude } = request.query as { Longitude: string; Latitude: string };
+      return {
+        status: true,
+        responseCode: '0',
+        message: 'Nearest agents fetched successfully.',
+        Longitude,
+        Latitude,
+        data: [],
+      };
+    },
+  );
+  app.post('/utilities/', { ...bearer, schema: { body: WaasMerchantBody } }, async () =>
+    responsePayload('Utility payment processed successfully.', []),
   );
 }
 

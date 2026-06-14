@@ -1,7 +1,9 @@
-/** Builds the Fastify app. Mirrors create_app() in app/main.py. */
 import cors from '@fastify/cors';
+import swagger from '@fastify/swagger';
+import ScalarApiReference from '@scalar/fastify-api-reference';
 import Fastify, { type FastifyInstance } from 'fastify';
 import {
+  jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
@@ -30,6 +32,12 @@ const LOG_LEVELS: Record<string, string> = {
   DEBUG: 'debug',
 };
 
+function gatewayTag(url: string): string {
+  if (url.startsWith('/sasapay')) return 'SasaPay';
+  if (url.startsWith('/mpesa')) return 'M-Pesa';
+  return 'Shared';
+}
+
 export function buildApp(opts: { logger?: boolean } = {}): FastifyInstance {
   const level = LOG_LEVELS[settings.LOG_LEVEL.toUpperCase()] ?? 'info';
   const app = Fastify({
@@ -40,8 +48,6 @@ export function buildApp(opts: { logger?: boolean } = {}): FastifyInstance {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // Permissive parser so undocumented/non-JSON bodies (Bill Manager fallback)
-  // don't 415 — mirrors FastAPI reading request.json() best-effort.
   app.addContentTypeParser('*', { parseAs: 'string' }, (_req, body, done) => {
     if (!body) return done(null, {});
     try {
@@ -61,28 +67,45 @@ export function buildApp(opts: { logger?: boolean } = {}): FastifyInstance {
   registerRequestLogger(app);
   registerErrorHandlers(app);
 
-  // Root-mounted routers.
+  // Tag each route by gateway (from its URL prefix) so the docs group by provider.
+  app.addHook('onRoute', (route) => {
+    route.schema ??= {};
+    const schema = route.schema as { hide?: boolean; tags?: string[] };
+    if (schema.hide || schema.tags) return;
+    schema.tags = [gatewayTag(route.url)];
+  });
+
+  // OpenAPI generated from the Zod route schemas; must be registered before routes.
+  app.register(swagger, {
+    openapi: {
+      info: { title: 'Noria Payments API Mock', version: '0.1.0' },
+      tags: [
+        { name: 'M-Pesa', description: 'Safaricom Daraja (M-Pesa) gateway endpoints' },
+        { name: 'SasaPay', description: 'SasaPay gateway endpoints (v1 + WaaS v2)' },
+        { name: 'Shared', description: 'Health checks, root, and mock-server controls' },
+      ],
+    },
+    transform: jsonSchemaTransform,
+  });
+
   app.register(homeRoutes);
-  app.register(oauthRoutes, { prefix: '/oauth' });
   app.register(mockAdminRoutes, { prefix: '/mock' });
-  app.register(billManagerRoutes, { prefix: '/v1/billmanager-invoice' });
 
-  // M-Pesa core under /mpesa, plus the mirrored /mpesa/mpesa namespace.
-  app.register(mpesaCoreRoutes, { prefix: '/mpesa' });
+  // M-Pesa: gateway `/mpesa` + the official Daraja path verbatim (swap host
+  // api.safaricom.co.ke -> <mock>/mpesa). Daraja's transactional paths already
+  // start with /mpesa, so those become /mpesa/mpesa/...; oauth/standingorder don't.
+  app.register(oauthRoutes, { prefix: '/mpesa/oauth' });
   app.register(mpesaCoreRoutes, { prefix: '/mpesa/mpesa' });
-
-  // Daraja endpoints that live at the service root and under /mpesa.
-  app.register(b2bExpressRoutes);
-  app.register(standingOrderRoutes);
   app.register(b2bExpressRoutes, { prefix: '/mpesa' });
   app.register(standingOrderRoutes, { prefix: '/mpesa' });
+  app.register(billManagerRoutes, { prefix: '/mpesa/v1/billmanager-invoice' });
 
-  // Daraja OAuth mirror under /mpesa/oauth.
-  app.register(oauthRoutes, { prefix: '/mpesa/oauth' });
-
-  // SasaPay v1 + WaaS v2.
+  // SasaPay: gateway `/sasapay` + official path (host swap keeps /api/v1, /api/v2/waas).
   app.register(sasapayV1Routes, { prefix: '/sasapay/api/v1' });
   app.register(waasV2Routes, { prefix: '/sasapay/api/v2/waas' });
+
+  app.register(ScalarApiReference, { routePrefix: '/docs' });
+  app.get('/openapi.json', { schema: { hide: true } }, () => app.swagger());
 
   return app;
 }

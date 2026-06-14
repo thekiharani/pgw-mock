@@ -15,11 +15,9 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**'],
-      // The listen() bootstrap is exercised at runtime, not under test.
       exclude: ['src/index.ts'],
     },
     env: {
-      // Point the app at the disposable test database and disable .env loading.
       DOTENV_CONFIG_PATH: './.env.test-nonexistent',
       DATABASE_URL: TEST_DB_URL,
       LOG_LEVEL: 'CRITICAL',

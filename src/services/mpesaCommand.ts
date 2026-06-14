@@ -1,7 +1,3 @@
-/**
- * Shared scaffold for M-Pesa command-style endpoints (B2C, B2B, Reversal,
- * TransactionStatus, AccountBalance, TaxRemit). Mirrors app/services/mpesa_command.py.
- */
 import type { FastifyRequest } from 'fastify';
 
 import { settings } from '@/config.js';
@@ -16,7 +12,7 @@ import { scheduleCallback } from '@/services/callbacks.js';
 import { type Operation, enforceCapability } from '@/services/capabilities.js';
 import { isTimeoutResult, resolveMpesaResult } from '@/services/scenarios.js';
 import { PaymentsUtils } from '@/utils/payments.js';
-import { generateUlid, uuid7 } from '@/utils/generators.js';
+import { uuid7 } from '@/utils/generators.js';
 
 export function mpesaError(
   description: string,
@@ -86,7 +82,6 @@ export async function runMpesaCommand(opts: RunMpesaCommandOptions): Promise<Rec
   const conversationId = `AG_${uuid7()}`;
   const originatorConversationId = uuid7();
 
-  // Strict validation
   if (settings.STRICT_PROVIDER_VALIDATION) {
     const missing = spec.requiredStrictFields.filter((f) => !body[f]);
     if (missing.length) {
@@ -112,7 +107,6 @@ export async function runMpesaCommand(opts: RunMpesaCommandOptions): Promise<Rec
     });
   }
 
-  // Merchant lookup
   const partyAValue = body[spec.partyAAttr];
   const merchant = await getMerchantByMpesaPaybill(db, String(partyAValue));
   if (!merchant) {
@@ -136,7 +130,7 @@ export async function runMpesaCommand(opts: RunMpesaCommandOptions): Promise<Rec
   });
   const isSuccess = scenario.code === '0';
 
-  const transactionId = generateUlid();
+  const transactionId = uuid7();
   const transactionCode = PaymentsUtils.generateTransactionCode();
 
   const delta = isSuccess ? balanceDeltaSign * amount : 0;

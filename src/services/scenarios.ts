@@ -1,9 +1,8 @@
-/** Mirrors app/services/scenarios.py. */
 import { and, desc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm';
 
 import type { Executor } from '@/db/client.js';
 import { mockScenarios } from '@/db/schema.js';
-import { generateUlid } from '@/utils/generators.js';
+import { uuid7 } from '@/utils/generators.js';
 
 export interface ProviderResult {
   code: string;
@@ -76,7 +75,7 @@ export async function createScenario(
   status: string;
   payload: Record<string, any>;
 }> {
-  const id = generateUlid();
+  const id = uuid7();
   const payload = opts.payload ?? {};
   await exec.insert(mockScenarios).values({
     id,
@@ -203,7 +202,6 @@ function amountResultCode(amount: unknown): string {
   return '0';
 }
 
-/** Mirror of _amount_selector: integral amounts -> int string, else decimal string. */
 function amountSelector(amount: unknown): string | null {
   if (amount === null || amount === undefined) return null;
   const raw = String(amount).trim();

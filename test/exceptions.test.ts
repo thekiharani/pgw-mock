@@ -1,4 +1,3 @@
-/** Ports tests/test_exceptions_and_common.py. */
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -20,7 +19,7 @@ import {
 import { settings } from '@/config.js';
 
 describe('exceptions', () => {
-  it('AppError default payload', () => {
+  it('gives AppError a default payload', () => {
     const exc = new AppError({ statusCode: 418, message: 'teapot' });
     expect(exc.statusCode).toBe(418);
     expect(exc.payload).toEqual({ status: false, message: 'teapot' });
@@ -32,7 +31,7 @@ describe('exceptions', () => {
     expect(exc.message).toBe('bad auth');
   });
 
-  it('DependencyUnavailableError payload', () => {
+  it('builds the DependencyUnavailableError payload', () => {
     const exc = new DependencyUnavailableError({
       dependency: 'database',
       message: 'db unavailable',
@@ -50,7 +49,7 @@ describe('exceptions', () => {
     expect(exc.payload.requestId).not.toBe('');
   });
 
-  it('PayloadError fallback message', () => {
+  it('falls back to a default PayloadError message', () => {
     const exc = new PayloadError({
       statusCode: 400,
       payload: { requestId: 'req_123', status: false },
@@ -58,7 +57,7 @@ describe('exceptions', () => {
     expect(exc.message).toBe('Request failed');
   });
 
-  it('domain error default messages', () => {
+  it('gives domain errors default messages', () => {
     expect(new MerchantNotFoundError().message).toBe('Merchant not found');
     expect(new InsufficientFundsError().message).toBe('Insufficient funds');
     expect(new PersistenceError().message).toBe('Persistence failed');
@@ -106,7 +105,6 @@ describe('common schema helpers', () => {
 
 describe('settings', () => {
   it('databaseUrl reflects DATABASE_URL (driver suffix stripped)', () => {
-    // test env sets a plain mysql:// URL
     expect(settings.databaseUrl.startsWith('mysql://')).toBe(true);
   });
 });

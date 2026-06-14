@@ -1,4 +1,3 @@
-/** Mirrors app/actions/sasapay_queries.py. */
 import { and, eq, or, sql } from 'drizzle-orm';
 
 import type { Executor } from '@/db/client.js';
@@ -27,6 +26,21 @@ export async function getMerchantBySasapayTill(
     })
     .from(merchants)
     .where(eq(merchants.sasapayTillNumber, tillNumber))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getMerchantBySasapayClientId(
+  exec: Executor,
+  clientId: string,
+): Promise<{ merchant_id: string; client_secret: string | null } | null> {
+  const rows = await exec
+    .select({
+      merchant_id: merchants.id,
+      client_secret: merchants.sasapayClientSecret,
+    })
+    .from(merchants)
+    .where(eq(merchants.sasapayClientId, clientId))
     .limit(1);
   return rows[0] ?? null;
 }

@@ -1,4 +1,3 @@
-/** Daraja M-Pesa Ratiba (Standing Orders). Mirrors app/routes/mpesa/standing_order.py. */
 import type { FastifyInstance } from 'fastify';
 
 import { validateBearerToken } from '@/auth/bearer.js';

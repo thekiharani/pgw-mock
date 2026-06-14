@@ -1,26 +1,24 @@
-/** Ports tests/test_routes_misc.py — home, oauth, mock admin, bill manager. */
 import { describe, expect, it } from 'vitest';
 
 import { flushBackgroundTasks } from '@/utils/background.js';
-import { BASIC, BEARER, MPESA_PAYBILL, get, post } from '@test/helpers/app.js';
+import { BASIC_MPESA, BEARER, MPESA_PAYBILL, get, post } from '@test/helpers/app.js';
 
 describe('home + health', () => {
   it('GET / returns merchants and metadata', async () => {
     const { status, json } = await get('/');
     expect(status).toBe(200);
     expect(json.message).toBe('Welcome to Noria Payments API Mock Server');
-    // home looks up the fixed demo paybill 887001 + sasapay till 888000
     expect(json.mpesaMerchant.merchant_paybill).toBe('887001');
     expect(json.sasaPayMerchant.merchant_paybill).toBe('888000');
     expect(json.datePrefix).toMatch(/^[A-Z][A-Z][0-9A-Z]$/);
   });
 
-  it('healthz / readyz', async () => {
+  it('reports healthy and ready', async () => {
     expect((await get('/healthz')).json).toEqual({ status: true });
     expect((await get('/readyz')).json).toEqual({ status: true, ready: true, database: true });
   });
 
-  it('unknown route 404 envelope', async () => {
+  it('returns a 404 envelope for an unknown route', async () => {
     const { status, json } = await get('/nope/nope');
     expect(status).toBe(404);
     expect(json).toEqual({ status: false, message: 'Route not found' });
@@ -29,33 +27,40 @@ describe('home + health', () => {
 
 describe('oauth', () => {
   it('requires basic auth', async () => {
-    const { status, json } = await get('/oauth/v1/generate?grant_type=client_credentials');
+    const { status, json } = await get('/mpesa/oauth/v1/generate?grant_type=client_credentials');
     expect(status).toBe(401);
     expect(json.errorCode).toBe('401.002.01');
   });
 
   it('rejects bad grant_type', async () => {
-    const { status, json } = await get('/oauth/v1/generate?grant_type=bad', {
-      authorization: BASIC,
+    const { status, json } = await get('/mpesa/oauth/v1/generate?grant_type=bad', {
+      authorization: BASIC_MPESA,
     });
     expect(status).toBe(400);
     expect(json.errorCode).toBe('invalid_grant');
   });
 
-  it('issues a token (v1 and v2)', async () => {
-    for (const v of ['v1', 'v2']) {
-      const { status, json } = await get(`/oauth/${v}/generate?grant_type=client_credentials`, {
-        authorization: BASIC,
-      });
-      expect(status).toBe(200);
-      expect(json.expires_in).toBe('3599');
-      expect(typeof json.access_token).toBe('string');
-    }
+  it('issues a token', async () => {
+    const { status, json } = await get('/mpesa/oauth/v1/generate?grant_type=client_credentials', {
+      authorization: BASIC_MPESA,
+    });
+    expect(status).toBe(200);
+    expect(json.expires_in).toBe('3599');
+    expect(typeof json.access_token).toBe('string');
   });
 
-  it('is mirrored under /mpesa/oauth', async () => {
-    const { status } = await get('/mpesa/oauth/v1/generate?grant_type=client_credentials', {
-      authorization: BASIC,
+  it('rejects incorrect client credentials', async () => {
+    const { status, json } = await get('/mpesa/oauth/v1/generate?grant_type=client_credentials', {
+      authorization: 'Basic ' + Buffer.from('wrong_id:wrong_secret').toString('base64'),
+    });
+    expect(status).toBe(401);
+    expect(json.errorCode).toBe('401.002.01');
+    expect(json.errorMessage).toBe('Invalid client credentials');
+  });
+
+  it('ignores unknown query params', async () => {
+    const { status } = await get('/mpesa/oauth/v1/generate?grant_type=client_credentials&foo=bar', {
+      authorization: BASIC_MPESA,
     });
     expect(status).toBe(200);
   });
@@ -85,34 +90,23 @@ describe('mock admin', () => {
 
 describe('bill manager', () => {
   it('optin requires shortcode', async () => {
-    const { json } = await post('/v1/billmanager-invoice/optin', {});
+    const { json } = await post('/mpesa/v1/billmanager-invoice/optin', {});
     expect(json.rescode).toBe('400');
   });
 
-  it('full invoice lifecycle + simulated payment callback', async () => {
-    const optin = await post('/v1/billmanager-invoice/optin', {
+  it('runs the invoice lifecycle and dispatches a simulated payment callback', async () => {
+    const optin = await post('/mpesa/v1/billmanager-invoice/optin', {
       shortcode: '887000',
       callbackurl: 'https://example.com/bm',
     });
     expect(optin.json.rescode).toBe('200');
 
-    const created = await post('/v1/billmanager-invoice/invoices/create', {
-      invoiceNumber: 'INV100',
+    const issued = await post('/mpesa/v1/billmanager-invoice/single-invoicing', {
+      externalReference: 'INV100',
       amount: '500',
       accountReference: 'ACC1',
     });
-    expect(created.json.rescode).toBe('0');
-
-    const dup = await post('/v1/billmanager-invoice/invoices/create', {
-      invoiceNumber: 'INV100',
-      amount: '500',
-    });
-    expect(dup.json.rescode).toBe('409');
-
-    const status = await post('/v1/billmanager-invoice/invoices/status', {
-      invoiceNumber: 'INV100',
-    });
-    expect(status.json.status).toBe('CREATED');
+    expect(issued.json.Status).toBe('Success');
 
     const pay = await post('/mock/billmanager/invoices/INV100/pay', {});
     expect(pay.status).toBe(200);
@@ -123,29 +117,27 @@ describe('bill manager', () => {
     expect(payAgain.status).toBe(409);
   });
 
-  it('cancel + cannot update cancelled', async () => {
-    await post('/v1/billmanager-invoice/invoices/create', { invoiceNumber: 'INV200', amount: '5' });
-    const cancel = await post('/v1/billmanager-invoice/invoices/cancel', {
+  it('cancels an invoice and rejects changes to a cancelled one', async () => {
+    await post('/mpesa/v1/billmanager-invoice/single-invoicing', {
+      externalReference: 'INV200',
+      amount: '5',
+    });
+    const cancel = await post('/mpesa/v1/billmanager-invoice/cancel-single-invoice', {
       invoiceNumber: 'INV200',
     });
     expect(cancel.json.rescode).toBe('0');
-    const update = await post('/v1/billmanager-invoice/invoices/update', {
+    const change = await post('/mpesa/v1/billmanager-invoice/change-invoice', {
       invoiceNumber: 'INV200',
       amount: '9',
     });
-    expect(update.json.rescode).toBe('409');
-  });
-
-  it('permissive fallback', async () => {
-    const { json } = await post('/v1/billmanager-invoice/some/unknown/path', { x: 1 });
-    expect(json).toEqual({ rescode: '0', resmsg: 'Request received successfully.' });
+    expect(change.json.rescode).toBe('409');
   });
 });
 
 describe('standing order tick', () => {
   it('creates a standing order then ticks it', async () => {
     const create = await post(
-      '/standingorder/v1/createStandingOrderExternal',
+      '/mpesa/standingorder/v1/createStandingOrderExternal',
       {
         StandingOrderName: 'Rent',
         StartDate: '20260101',
@@ -163,8 +155,6 @@ describe('standing order tick', () => {
     expect(create.status).toBe(200);
     await flushBackgroundTasks();
     const soId = create.json.ResponseBody.standingOrderId ?? null;
-    // standingOrderId is returned in the callback, not the response; tick a
-    // non-existent id returns 404.
     const tick = await post('/mock/standing-orders/does-not-exist/tick', {});
     expect(tick.status).toBe(404);
     void soId;
@@ -172,39 +162,35 @@ describe('standing order tick', () => {
 });
 
 describe('bill manager — more endpoints', () => {
-  it('opt-in then change details and billing info', async () => {
-    await post('/v1/billmanager-invoice/optin', {
+  it('opts in then changes the opt-in details', async () => {
+    await post('/mpesa/v1/billmanager-invoice/optin', {
       shortcode: '887000',
       callbackurl: 'https://e.co/x',
     });
     expect(
       (
-        await post('/v1/billmanager-invoice/change-optin-details', {
+        await post('/mpesa/v1/billmanager-invoice/change-optin-details', {
           shortcode: '887000',
           email: 'a@b.c',
         })
       ).json.rescode,
     ).toBe('200');
     expect(
-      (await post('/v1/billmanager-invoice/change-billing-info', { shortcode: '887000', tax: 16 }))
+      (await post('/mpesa/v1/billmanager-invoice/change-optin-details', { shortcode: '999999' }))
         .json.rescode,
-    ).toBe('200');
-    expect(
-      (await post('/v1/billmanager-invoice/change-optin-details', { shortcode: '999999' })).json
-        .rescode,
     ).toBe('404');
   });
 
-  it('single + bulk invoicing and status-not-found', async () => {
+  it('issues single and bulk invoices', async () => {
     expect(
       (
-        await post('/v1/billmanager-invoice/single-invoicing', {
+        await post('/mpesa/v1/billmanager-invoice/single-invoicing', {
           externalReference: 'S1',
           amount: '10',
         })
       ).json.Status,
     ).toBe('Success');
-    const bulk = await post('/v1/billmanager-invoice/bulk-invoicing', {
+    const bulk = await post('/mpesa/v1/billmanager-invoice/bulk-invoicing', {
       invoices: [
         { invoiceNumber: 'B1', amount: '5' },
         { invoiceNumber: 'B2', amount: '6' },
@@ -212,22 +198,35 @@ describe('bill manager — more endpoints', () => {
     });
     expect(bulk.json.acceptedInvoices).toEqual(['B1', 'B2']);
     expect(
-      (await post('/v1/billmanager-invoice/bulk-invoicing', { invoices: [] })).json.Status,
+      (await post('/mpesa/v1/billmanager-invoice/bulk-invoicing', { invoices: [] })).json.Status,
     ).toBe('Failed');
-    expect(
-      (await post('/v1/billmanager-invoice/invoices/status', { invoiceNumber: 'NOPE' })).json
-        .rescode,
-    ).toBe('404');
   });
 
-  it('bulk-cancel + reconciliation', async () => {
-    await post('/v1/billmanager-invoice/invoices/create', { invoiceNumber: 'C9', amount: '1' });
-    const cancel = await post('/v1/billmanager-invoice/bulk-cancel-invoice', {
+  it('updates invoices in bulk', async () => {
+    await post('/mpesa/v1/billmanager-invoice/bulk-invoicing', {
+      invoices: [{ invoiceNumber: 'U1', amount: '5' }],
+    });
+    const change = await post('/mpesa/v1/billmanager-invoice/change-invoices', {
+      invoices: [
+        { invoiceNumber: 'U1', amount: '7' },
+        { invoiceNumber: 'MISSING', amount: '1' },
+      ],
+    });
+    expect(change.json.updatedInvoices).toEqual(['U1']);
+    expect(change.json.notFound).toEqual(['MISSING']);
+  });
+
+  it('cancels invoices in bulk and echoes reconciliation data', async () => {
+    await post('/mpesa/v1/billmanager-invoice/single-invoicing', {
+      externalReference: 'C9',
+      amount: '1',
+    });
+    const cancel = await post('/mpesa/v1/billmanager-invoice/cancel-bulk-invoice', {
       invoices: ['C9', 'MISSING'],
     });
     expect(cancel.json.cancelled).toEqual(['C9']);
     expect(cancel.json.notFound).toEqual(['MISSING']);
-    const recon = await post('/v1/billmanager-invoice/payments-reconciliation', { x: 1 });
+    const recon = await post('/mpesa/v1/billmanager-invoice/reconciliation', { x: 1 });
     expect(recon.json.echo).toEqual({ x: 1 });
   });
 });
@@ -255,29 +254,32 @@ describe('home /ping + error envelopes', () => {
 });
 
 describe('auth scheme errors', () => {
-  it('bearer wrong scheme and empty token', async () => {
+  it('rejects a bearer token with the wrong scheme or an empty value', async () => {
     expect(
-      (await post('/mpesa/stkpush/v1/processrequest', {}, { authorization: 'Token abc' })).json
-        .errorMessage,
+      (await post('/mpesa/mpesa/stkpush/v1/processrequest', {}, { authorization: 'Token abc' }))
+        .json.errorMessage,
     ).toBe('Authorization type must be Bearer');
     expect(
-      (await post('/mpesa/stkpush/v1/processrequest', {}, { authorization: 'Bearer' })).json
+      (await post('/mpesa/mpesa/stkpush/v1/processrequest', {}, { authorization: 'Bearer' })).json
         .errorMessage,
     ).toBe('Bearer token is required');
   });
 
-  it('basic wrong scheme and bad format', async () => {
+  it('rejects basic auth with the wrong scheme or a malformed value', async () => {
     expect(
-      (await get('/oauth/v1/generate?grant_type=client_credentials', { authorization: 'Bearer x' }))
-        .json.errorMessage,
+      (
+        await get('/mpesa/oauth/v1/generate?grant_type=client_credentials', {
+          authorization: 'Bearer x',
+        })
+      ).json.errorMessage,
     ).toBe('Authorization type must be Basic');
-    const badFmt = await get('/oauth/v1/generate?grant_type=client_credentials', {
+    const badFmt = await get('/mpesa/oauth/v1/generate?grant_type=client_credentials', {
       authorization: 'Basic bm9jb2xvbg==',
     });
     expect(badFmt.status).toBe(401);
   });
 
-  it('sasapay bearer 401 uses sasapay envelope', async () => {
+  it('returns a sasapay envelope for a missing sasapay bearer token', async () => {
     const { status, json } = await post('/sasapay/api/v1/payments/b2c/', {}, {});
     expect(status).toBe(401);
     expect(json.ResponseDescription).toBe('Authorization header is required');

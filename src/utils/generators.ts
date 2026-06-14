@@ -1,12 +1,6 @@
-/** Mirrors app/utils/generators.py. */
 import { randomBytes } from 'node:crypto';
 import { SignJWT } from 'jose';
-import { ulid } from 'ulid';
 import { v7 as uuidV7 } from 'uuid';
-
-export function generateUlid(): string {
-  return ulid().toLowerCase();
-}
 
 export function uuid7(): string {
   return uuidV7();
@@ -16,19 +10,15 @@ export function preUuid(prefix = ''): string {
   return `${prefix}${uuidV7().replace(/-/g, '')}`;
 }
 
-/**
- * SasaPay v1 access token — a HS256 JWT signed with a fake secret.
- * Mirrors generators.generate_token() (python-jose jwt.encode).
- */
-export async function generateToken(): Promise<string> {
+export async function generateToken(subject?: string): Promise<string> {
   const secret = new TextEncoder().encode('Fake Secret');
-  return await new SignJWT({ id: 'Fake Merchant ID' })
+  return await new SignJWT({ id: subject ?? 'Fake Merchant ID' })
     .setProtectedHeader({ alg: 'HS256' })
+    .setJti(randomBytes(16).toString('hex'))
     .setExpirationTime('1h')
     .sign(secret);
 }
 
-/** Daraja-style 32-char alphanumeric token. Mirrors generate_daraja_token(). */
 export function generateDarajaToken(): string {
   const chunks: string[] = [];
   let length = 0;

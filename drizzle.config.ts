@@ -1,6 +1,5 @@
 import { defineConfig } from 'drizzle-kit';
 
-// Standalone (no app imports) so drizzle-kit needs no path-alias resolution.
 function databaseUrl(): string {
   const url = process.env.DATABASE_URL;
   if (url) return url.replace(/^([a-z]+)\+[a-z0-9]+:\/\//i, '$1://');

@@ -1,4 +1,3 @@
-/** SasaPay v1 request schemas. Mirrors app/schemas/sasapay.py. */
 import { z } from 'zod';
 
 import {
@@ -34,7 +33,6 @@ export const C2BRequest = z
       .transform((v, ctx): string | null => {
         if (v === null || v === undefined) return null;
         try {
-          // allow_zero=True
           return decimalImpl(v, 'TransactionFee', true);
         } catch (e) {
           ctx.addIssue({ code: 'custom', message: (e as Error).message });
@@ -126,7 +124,6 @@ export const AccountVerifyRequest = z
   .strict();
 
 function decimalImpl(v: unknown, field: string, allowZero: boolean): string {
-  // local copy to keep TransactionFee message-perfect
   const raw = String(v).trim();
   if (!/^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i.test(raw)) {
     throw new Error(`${field} must be a valid decimal value`);
@@ -150,3 +147,41 @@ export type SasaB2BBody = z.infer<typeof B2BRequest>;
 export type SasaTransactionStatusBody = z.infer<typeof TransactionStatusRequest>;
 export type SasaBulkBody = z.infer<typeof BulkPaymentRequest>;
 export type SasaAccountVerifyBody = z.infer<typeof AccountVerifyRequest>;
+
+// Request schemas for the additional official SasaPay v1 endpoints. Required
+// fields are limited to what the SDK guarantees — the payment defaults
+// (MerchantCode/Currency/CallBackURL) plus Amount for payments, or the GET query
+// params it sends. Endpoint-specific fields pass through until docs let us tighten.
+const sasapayPaymentBase = {
+  MerchantCode: shortCodeStr,
+  Amount: decimalString('Amount'),
+  Currency: currencyCodeStr.nullish(),
+  CallBackURL: httpUrl.nullish(),
+};
+
+export const CardPaymentRequest = z.object(sasapayPaymentBase).passthrough();
+export const PreApprovedPaymentRequest = z.object(sasapayPaymentBase).passthrough();
+export const RemittancePaymentRequest = z.object(sasapayPaymentBase).passthrough();
+export const LipaFareRequest = z.object(sasapayPaymentBase).passthrough();
+export const BusinessToBeneficiaryRequest = z.object(sasapayPaymentBase).passthrough();
+export const UtilityPaymentRequest = z.object(sasapayPaymentBase).passthrough();
+
+export const InternalFundMovementRequest = z.object({ MerchantCode: shortCodeStr }).passthrough();
+export const RegisterIpnUrlRequest = z.object({ MerchantCode: shortCodeStr }).passthrough();
+export const MerchantOnboardingRequest = z.object({}).passthrough();
+export const UtilityBillQueryRequest = z.object({}).passthrough();
+
+// status / verify endpoints: at least an identifier, rest passthrough.
+export const TransactionReferenceRequest = z
+  .object({
+    MerchantCode: shortCodeStr.nullish(),
+    MerchantTransactionReference: nonEmptyStr().nullish(),
+    TransactionCode: nonEmptyStr().nullish(),
+    CheckoutRequestId: nonEmptyStr().nullish(),
+  })
+  .passthrough();
+
+// GET querystrings (params the SDK sends).
+export const CheckBalanceQuery = z.object({ MerchantCode: shortCodeStr });
+export const SubCountiesQuery = z.object({ county_id: nonEmptyStr() });
+export const PassthroughQuery = z.object({}).passthrough();

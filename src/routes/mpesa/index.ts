@@ -1,4 +1,3 @@
-/** M-Pesa/Daraja core routes. Mirrors app/routes/mpesa/* and router.py. */
 import type { FastifyInstance } from 'fastify';
 
 import { validateBearerToken } from '@/auth/bearer.js';
@@ -38,7 +37,7 @@ import {
 import { isTimeoutResult, resolveMpesaResult } from '@/services/scenarios.js';
 import { enqueueBackgroundTask } from '@/utils/background.js';
 import { pyFloat } from '@/utils/format.js';
-import { generateUlid, uuid7 } from '@/utils/generators.js';
+import { uuid7 } from '@/utils/generators.js';
 import { PaymentsUtils } from '@/utils/payments.js';
 
 const sleep = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
@@ -46,7 +45,6 @@ const sleep = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
 export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', validateBearerToken);
 
-  // --- STK Push ----------------------------------------------------------
   app.post('/stkpush/v1/processrequest', { schema: { body: STKPushRequest } }, async (request) => {
     const body = request.body as any;
     const amount = body.Amount;
@@ -133,7 +131,7 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     const resultStatus = scenario.status;
     const isSuccess = resultCode === '0';
     const mpesaCode = PaymentsUtils.generateTransactionCode();
-    const transactionId = generateUlid();
+    const transactionId = uuid7();
     const txTime = PaymentsUtils.generateTimestamp();
     const senderName = PaymentsUtils.getRandomName();
 
@@ -256,7 +254,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // --- STK Push Query ----------------------------------------------------
   app.post('/stkpushquery/v1/query', { schema: { body: STKPushQueryRequest } }, async (request) => {
     const body = request.body as any;
     const checkoutRequestId = body.CheckoutRequestID;
@@ -302,7 +299,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // --- C2B Register URL --------------------------------------------------
   const handleRegisterUrl = async (request: any) => {
     const body = request.body as any;
     const shortCode = body.ShortCode;
@@ -395,8 +391,7 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
   app.post('/c2b/v1/registerurl', { schema: { body: C2BRegisterURLRequest } }, handleRegisterUrl);
   app.post('/c2b/v2/registerurl', { schema: { body: C2BRegisterURLRequest } }, handleRegisterUrl);
 
-  // --- C2B Simulate ------------------------------------------------------
-  app.post('/c2b/v2/simulate', { schema: { body: C2BSimulateRequest } }, async (request) => {
+  app.post('/c2b/v1/simulate', { schema: { body: C2BSimulateRequest } }, async (request) => {
     const body = request.body as any;
     const shortCode = body.ShortCode;
     const amount = body.Amount;
@@ -441,7 +436,7 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     const resultStatus = scenario.status;
     const isSuccess = resultCode === '0';
     const transId = PaymentsUtils.generateTransactionCode();
-    const transactionId = generateUlid();
+    const transactionId = uuid7();
     const senderName = PaymentsUtils.getRandomName();
 
     let newBalance: number;
@@ -560,7 +555,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // --- B2C ---------------------------------------------------------------
   const B2C_SPEC: MpesaCommandSpec = {
     flow: 'b2c',
     partyAAttr: 'PartyA',
@@ -633,7 +627,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  // --- B2B ---------------------------------------------------------------
   const B2B_SPEC: MpesaCommandSpec = {
     flow: 'b2b',
     partyAAttr: 'PartyA',
@@ -726,7 +719,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  // --- Tax Remit ---------------------------------------------------------
   const TAX_SPEC: MpesaCommandSpec = {
     flow: 'tax_remit',
     partyAAttr: 'PartyA',
@@ -796,7 +788,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  // --- Reversal ----------------------------------------------------------
   const REVERSAL_STRICT = [
     'Initiator',
     'SecurityCredential',
@@ -890,7 +881,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  // --- Account Balance ---------------------------------------------------
   const AB_STRICT = ['Initiator', 'SecurityCredential', 'CommandID', 'IdentifierType', 'Remarks'];
   app.post(
     '/accountbalance/v1/query',
@@ -992,7 +982,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Transaction Status ------------------------------------------------
   const TS_STRICT = ['Initiator', 'SecurityCredential', 'CommandID', 'IdentifierType', 'Remarks'];
   app.post(
     '/transactionstatus/v1/query',
@@ -1130,7 +1119,6 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- QR Code -----------------------------------------------------------
   app.post('/qrcode/v1/generate', { schema: { body: QRCodeRequest } }, async (request) => {
     const body = request.body as any;
     const merchantName = body.MerchantName;
@@ -1157,6 +1145,17 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
       QRType: qrType,
       TrxCode: trxCode,
       RefNo: reference,
+    };
+  });
+
+  app.post('/pulltransactions/v1/query', async (request) => {
+    const body = request.body as any;
+    return {
+      ResponseRefID: uuid7().replace(/-/g, '').toUpperCase().slice(0, 16),
+      ResponseCode: '1000',
+      ResponseMessage: 'Success',
+      ShortCode: body?.ShortCode ?? null,
+      Response: [],
     };
   });
 }

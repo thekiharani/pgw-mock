@@ -1,4 +1,3 @@
-/** Unit-tests the global error handlers (app/main.py exception handlers). */
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 
@@ -26,7 +25,7 @@ async function appWithRoutes() {
 }
 
 describe('error handlers', () => {
-  it('AppError returns its status + payload verbatim', async () => {
+  it('returns an AppError status and payload verbatim', async () => {
     const app = await appWithRoutes();
     const res = await app.inject({ method: 'GET', url: '/app-error' });
     expect(res.statusCode).toBe(418);

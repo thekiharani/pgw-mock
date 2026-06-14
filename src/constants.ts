@@ -1,5 +1,3 @@
-/** Mirrors app/constants.py. */
-
 export const TRIGGER_FAILURE_AMOUNTS: ReadonlySet<number> = new Set([
   11000, 22000, 33000, 44000, 55000, 66000, 77000, 88000, 99000,
 ]);

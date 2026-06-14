@@ -1,13 +1,3 @@
-/**
- * Background task runner — the FastAPI BackgroundTasks equivalent.
- *
- * Tasks enqueued during a request run AFTER the response is sent (onResponse
- * hook), so handlers return immediately and callbacks fire asynchronously.
- *
- * In-flight batches are tracked so tests can deterministically await them via
- * flushBackgroundTasks() — mirroring how httpx ASGITransport runs FastAPI
- * background tasks inline before the test sees the response.
- */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 export type BackgroundTask = () => Promise<unknown> | unknown;
@@ -24,9 +14,7 @@ export function enqueueBackgroundTask(request: FastifyRequest, task: BackgroundT
   request.backgroundTasks.push(task);
 }
 
-/** Await all currently-running and imminently-scheduled background batches. */
 export async function flushBackgroundTasks(): Promise<void> {
-  // Let any pending onResponse hooks start and register their batch.
   for (let i = 0; i < 5 && inFlight.size === 0; i++) {
     await new Promise((r) => setImmediate(r));
   }

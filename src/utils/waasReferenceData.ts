@@ -1,5 +1,3 @@
-/** Mirrors app/utils/waas_reference_data.py. */
-
 export const COUNTRIES = [
   { id: 1, name: 'Kenya', callingCode: '254', isoCode: 'KE', currency: 'KES' },
   { id: 2, name: 'Uganda', callingCode: '256', isoCode: 'UG', currency: 'UGX' },

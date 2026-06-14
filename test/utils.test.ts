@@ -1,25 +1,12 @@
-/** Ports tests/test_utils.py (representative coverage of the util surface). */
 import { describe, expect, it } from 'vitest';
 
-import {
-  generateDarajaToken,
-  generateToken,
-  generateUlid,
-  preUuid,
-  uuid7,
-} from '@/utils/generators.js';
+import { generateDarajaToken, generateToken, preUuid, uuid7 } from '@/utils/generators.js';
 import { DateUtils } from '@/utils/dateUtils.js';
 import { PaymentsUtils } from '@/utils/payments.js';
 import { generateOtp, maskAccountNumber, maskMsisdn, maskValue } from '@/utils/waas.js';
 import { pyFloat } from '@/utils/format.js';
 
 describe('generators', () => {
-  it('generateUlid is lowercase 26 chars', () => {
-    const u = generateUlid();
-    expect(u).toMatch(/^[0-9a-z]{26}$/);
-    expect(u).toBe(u.toLowerCase());
-  });
-
   it('uuid7 is a v7 uuid', () => {
     expect(uuid7()).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
@@ -56,24 +43,24 @@ describe('DateUtils', () => {
 });
 
 describe('PaymentsUtils', () => {
-  it('calculateTransactionFee tiers', () => {
+  it('calculates transaction fees by tier', () => {
     expect(PaymentsUtils.calculateTransactionFee(300)).toBe(0);
     expect(PaymentsUtils.calculateTransactionFee(100)).toBe(0);
-    expect(PaymentsUtils.calculateTransactionFee(301)).toBe(5); // 4.515 -> max(5)
-    expect(PaymentsUtils.calculateTransactionFee(1000)).toBe(15); // ceil(15)
+    expect(PaymentsUtils.calculateTransactionFee(301)).toBe(5);
+    expect(PaymentsUtils.calculateTransactionFee(1000)).toBe(15);
     expect(PaymentsUtils.calculateTransactionFee(10000)).toBe(150);
   });
 
-  it('mapChannelToDestination', () => {
+  it('maps a channel to its destination', () => {
     expect(PaymentsUtils.mapChannelToDestination('00')).toBe('SasaPay');
     expect(PaymentsUtils.mapChannelToDestination('63902')).toBe('MPESA');
     expect(PaymentsUtils.mapChannelToDestination('zzz')).toBe('UNKNOWN');
   });
 
-  it('generateTransactionCode shape', () => {
+  it('generates a transaction code of the expected shape', () => {
     const code = PaymentsUtils.generateTransactionCode('SWEJ18');
     expect(code.startsWith('SWEJ18')).toBe(true);
-    expect(code.length).toBe(6 + 3 + 7); // prefix + datePrefix(3) + base36(7)
+    expect(code.length).toBe(6 + 3 + 7);
   });
 
   it('generateRandomBase36String is uppercase hex of given length', () => {
@@ -94,7 +81,7 @@ describe('waas helpers', () => {
     expect(maskValue('254712345678', 3, 3)).toBe('254******678');
     expect(maskValue('ab', 3, 3)).toBe('ab');
   });
-  it('maskMsisdn and maskAccountNumber', () => {
+  it('masks msisdns and account numbers', () => {
     expect(maskMsisdn('254712345678')).toBe('254******678');
     expect(maskAccountNumber('1234567890')).toBe('123456***0');
   });

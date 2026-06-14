@@ -1,8 +1,8 @@
-/** SasaPay v1 routes. Mirrors app/routes/sasapay/* and router.py (prefix /sasapay/api/v1). */
 import type { FastifyInstance } from 'fastify';
 
 import { validateBasicAuth } from '@/auth/basic.js';
 import { validateBearerToken } from '@/auth/bearer.js';
+import { requireClientCredentialsGrant } from '@/auth/grant.js';
 import { settings } from '@/config.js';
 import { DEFAULT_SASAPAY_CALLBACK, TRIGGER_FAILURE_AMOUNTS } from '@/constants.js';
 import { db } from '@/db/client.js';
@@ -17,19 +17,32 @@ import {
 } from '@/actions/sasapayQueries.js';
 import {
   AccountVerifyRequest,
-  AuthQuery,
   B2BRequest,
   B2CRequest,
   BulkPaymentRequest,
+  BusinessToBeneficiaryRequest,
   C2BRequest,
+  CardPaymentRequest,
+  CheckBalanceQuery,
+  InternalFundMovementRequest,
+  LipaFareRequest,
+  MerchantOnboardingRequest,
+  PassthroughQuery,
+  PreApprovedPaymentRequest,
   ProcessPaymentRequest,
+  RegisterIpnUrlRequest,
+  RemittancePaymentRequest,
+  SubCountiesQuery,
+  TransactionReferenceRequest,
   TransactionStatusRequest,
+  UtilityBillQueryRequest,
+  UtilityPaymentRequest,
 } from '@/schemas/sasapay.js';
 import { deliverCallback, scheduleCallback } from '@/services/callbacks.js';
 import { type SasaPayCommandSpec, runSasapayCommand } from '@/services/sasapayCommand.js';
 import { resolveSasapayResult } from '@/services/scenarios.js';
 import { enqueueBackgroundTask } from '@/utils/background.js';
-import { generateToken, generateUlid, uuid7 } from '@/utils/generators.js';
+import { generateToken, uuid7 } from '@/utils/generators.js';
 import { PaymentsUtils } from '@/utils/payments.js';
 import { registerToken } from '@/services/tokens.js';
 
@@ -46,26 +59,26 @@ const isoNaive = (d: Date | null | undefined): string | null =>
     : null;
 
 export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
-  // --- Access token ------------------------------------------------------
-  app.get(
-    '/auth/token/',
-    { onRequest: validateBasicAuth, schema: { querystring: AuthQuery } },
-    async () => {
-      const token = await generateToken();
-      const scope = 'merchants C2B B2B B2C';
-      await registerToken(db, token, { provider: 'sasapay-v1', expiresIn: 3600, scope });
-      return {
-        status: true,
-        detail: 'SUCCESS',
-        access_token: token,
-        expires_in: 3600,
-        token_type: 'Bearer',
-        scope,
-      };
-    },
-  );
+  app.get('/auth/token/', { onRequest: validateBasicAuth }, async (request) => {
+    requireClientCredentialsGrant(request, 'sasapay');
+    const token = await generateToken(request.authMerchantId);
+    const scope = 'merchants C2B B2B B2C';
+    await registerToken(db, token, {
+      provider: 'sasapay-v1',
+      expiresIn: 3600,
+      scope,
+      meta: { merchantId: request.authMerchantId ?? null },
+    });
+    return {
+      status: true,
+      detail: 'SUCCESS',
+      access_token: token,
+      expires_in: 3600,
+      token_type: 'Bearer',
+      scope,
+    };
+  });
 
-  // --- C2B request-payment ----------------------------------------------
   app.post(
     '/payments/request-payment/',
     { onRequest: validateBearerToken, schema: { body: C2BRequest } },
@@ -99,13 +112,12 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
       const transId = PaymentsUtils.generateTransactionCode('SPEJ18');
       const thirdPartyTransId = PaymentsUtils.generateTransactionCode();
       const senderName = PaymentsUtils.getRandomName();
-      const transactionId = generateUlid();
+      const transactionId = uuid7();
       const transactionDate = PaymentsUtils.generateTimestamp();
       const transactionReference = `PR${randInt(100_000_000)}`;
 
       let newBalance: number;
       if (!walletFlow && isSuccess) {
-        // credit applied after persistence below (atomic with insert)
         newBalance = Number(merchant.merchant_balance) + amount;
       } else {
         newBalance = Number(merchant.merchant_balance) + (isSuccess && walletFlow ? amount : 0);
@@ -248,7 +260,6 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- C2B process-payment (wallet verification) -------------------------
   app.post(
     '/payments/process-payment/',
     { onRequest: validateBearerToken, schema: { body: ProcessPaymentRequest } },
@@ -428,7 +439,6 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- B2C ---------------------------------------------------------------
   const B2C_SPEC: SasaPayCommandSpec = { flow: 'b2c', category: 'B2C', requestIdPrefix: 'B2C' };
   app.post(
     '/payments/b2c/',
@@ -501,7 +511,6 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- B2B ---------------------------------------------------------------
   const B2B_SPEC: SasaPayCommandSpec = { flow: 'b2b', category: 'B2B', requestIdPrefix: 'B2B' };
   const b2bDestination = (body: any) =>
     body.NetworkCode === '0'
@@ -573,9 +582,8 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Bulk --------------------------------------------------------------
   app.post(
-    '/payments/bulk/',
+    '/payments/bulk-payments/',
     { onRequest: validateBearerToken, schema: { body: BulkPaymentRequest } },
     async (request) => {
       const body = request.body as any;
@@ -625,7 +633,7 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
           for (const recipient of recipients) {
             const amount = Number(recipient.amount);
             const fee = PaymentsUtils.calculateTransactionFee(amount);
-            const txId = generateUlid();
+            const txId = uuid7();
             const txCode = PaymentsUtils.generateTransactionCode('SWEJ18');
             const tpCode = PaymentsUtils.generateTransactionCode();
             await insertSasapayTransaction(tx, {
@@ -715,7 +723,6 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Transaction status (two paths) ------------------------------------
   const txStatusHandler = async (request: any) => {
     const body = request.body as any;
     const merchant = await getMerchantBySasapayTill(db, body.MerchantCode);
@@ -797,17 +804,15 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
     txStatusHandler,
   );
 
-  // --- Channels ----------------------------------------------------------
-  app.get('/channels/', { onRequest: validateBearerToken }, async () => {
+  app.get('/payments/channel-codes/', { onRequest: validateBearerToken }, async () => {
     const data = Object.entries(PaymentsUtils.CHANNEL_MAP)
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([code, name]) => ({ channelCode: code, channelName: name }));
     return { status: true, responseCode: '0', message: 'Channels fetched successfully.', data };
   });
 
-  // --- Account verify ----------------------------------------------------
   app.post(
-    '/accounts/verify/',
+    '/accounts/account-validation/',
     { onRequest: validateBearerToken, schema: { body: AccountVerifyRequest } },
     async (request) => {
       const body = request.body as any;
@@ -828,6 +833,115 @@ export async function sasapayV1Routes(app: FastifyInstance): Promise<void> {
         },
       };
     },
+  );
+
+  // Official SasaPay v1 endpoints. Methods + GET query params are taken from the
+  // SDK (SasaPayClient); request bodies validate the SDK-guaranteed fields and
+  // pass the rest through. Responses are generic success envelopes pending the docs.
+  const bearer = { onRequest: validateBearerToken } as const;
+  const v1Stub = (message: string, data?: Record<string, unknown>) => ({
+    status: true,
+    responseCode: '0',
+    message,
+    ...(data ? { data } : {}),
+  });
+  const v1List = (message: string) => ({ status: true, responseCode: '0', message, data: [] });
+
+  app.post(
+    '/payments/card-payments/',
+    { ...bearer, schema: { body: CardPaymentRequest } },
+    async () => v1Stub('Card payment processed successfully.'),
+  );
+  app.post(
+    '/payments/approved/',
+    { ...bearer, schema: { body: PreApprovedPaymentRequest } },
+    async () => v1Stub('Pre-approved payment processed successfully.'),
+  );
+  app.post(
+    '/remittances/remittance-payments/',
+    { ...bearer, schema: { body: RemittancePaymentRequest } },
+    async () => v1Stub('Remittance payment processed successfully.'),
+  );
+  app.post(
+    '/transactions/fund-movement/',
+    { ...bearer, schema: { body: InternalFundMovementRequest } },
+    async () => v1Stub('Fund movement processed successfully.'),
+  );
+  app.post(
+    '/payments/request-payment/status/',
+    { ...bearer, schema: { body: TransactionReferenceRequest } },
+    async () => v1Stub('Request payment status fetched successfully.'),
+  );
+  app.get(
+    '/payments/check-balance/',
+    { ...bearer, schema: { querystring: CheckBalanceQuery } },
+    async (request) => {
+      const { MerchantCode } = request.query as { MerchantCode: string };
+      return v1Stub('Merchant balance fetched successfully.', { MerchantCode });
+    },
+  );
+  app.post(
+    '/transactions/verify/',
+    { ...bearer, schema: { body: TransactionReferenceRequest } },
+    async () => v1Stub('Transaction verified successfully.'),
+  );
+  app.post(
+    '/payments/b2c/beneficiary/',
+    { ...bearer, schema: { body: BusinessToBeneficiaryRequest } },
+    async () => v1Stub('Business to beneficiary payment processed successfully.'),
+  );
+  app.post(
+    '/payments/register-ipn-url/',
+    { ...bearer, schema: { body: RegisterIpnUrlRequest } },
+    async () => v1Stub('IPN URL registered successfully.'),
+  );
+  app.post('/payments/lipa-fare/', { ...bearer, schema: { body: LipaFareRequest } }, async () =>
+    v1Stub('Lipa fare processed successfully.'),
+  );
+  app.post('/utilities/', { ...bearer, schema: { body: UtilityPaymentRequest } }, async () =>
+    v1Stub('Utility payment processed successfully.'),
+  );
+  app.post(
+    '/utilities/bill-query',
+    { ...bearer, schema: { body: UtilityBillQueryRequest } },
+    async () => v1Stub('Utility bill queried successfully.'),
+  );
+  app.post(
+    '/payments/bulk-payments/status/',
+    { ...bearer, schema: { body: TransactionReferenceRequest } },
+    async () => v1Stub('Bulk payment status fetched successfully.'),
+  );
+  app.post(
+    '/accounts/merchant-onboarding/',
+    { ...bearer, schema: { body: MerchantOnboardingRequest } },
+    async () => v1Stub('Merchant onboarded successfully.'),
+  );
+  app.get('/transactions/', { ...bearer, schema: { querystring: PassthroughQuery } }, async () =>
+    v1List('Transactions fetched successfully.'),
+  );
+  app.get('/accounts/business-types/', bearer, async () =>
+    v1List('Business types fetched successfully.'),
+  );
+  app.get('/accounts/countries/', bearer, async () => v1List('Countries fetched successfully.'));
+  app.get(
+    '/accounts/sub-counties/',
+    { ...bearer, schema: { querystring: SubCountiesQuery } },
+    async (request) => {
+      const { county_id } = request.query as { county_id: string };
+      return {
+        status: true,
+        responseCode: '0',
+        message: 'Sub counties fetched successfully.',
+        county_id,
+        data: [],
+      };
+    },
+  );
+  app.get('/accounts/industries/', bearer, async () => v1List('Industries fetched successfully.'));
+  app.get(
+    '/accounts/available-bill-number/',
+    { ...bearer, schema: { querystring: PassthroughQuery } },
+    async () => v1List('Available bill number fetched successfully.'),
   );
 }
 

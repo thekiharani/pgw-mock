@@ -1,4 +1,3 @@
-/** Bearer token validation. Mirrors validate_bearer_token in app/middleware/auth.py. */
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import { settings } from '@/config.js';

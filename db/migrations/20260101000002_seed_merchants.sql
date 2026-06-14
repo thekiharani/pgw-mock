@@ -254,6 +254,15 @@ VALUES
   ('019ec766-4e13-7796-bf88-666c01f7efa8', 'Mock SasaPay Merchant 888048', 'sandbox+sasapay-888048@example.com', '254799000238', 'NA-SASAPAY-888048', '888048', 0, 50000000, '{"description":"Mock SasaPay Merchant 888048 Sandbox Merchant","sasapay":{"till_number":"888048","capabilities":["c2b","b2c","b2b"]}}'),
   ('019ec766-4e13-7796-bf88-6836b76da342', 'Mock SasaPay Merchant 888049', 'sandbox+sasapay-888049@example.com', '254799000239', 'NA-SASAPAY-888049', '888049', 0, 50000000, '{"description":"Mock SasaPay Merchant 888049 Sandbox Merchant","sasapay":{"till_number":"888049","capabilities":["c2b","b2c","b2b"]}}');
 
+-- Deterministic per-merchant API credentials (derived from the paybill/till so
+-- they are predictable and unique). Each merchant authenticates with its own
+-- consumer key/secret (M-Pesa) or client id/secret (SasaPay).
+UPDATE merchants SET
+  mpesa_consumer_key    = CONCAT('mpesa_ck_', mpesa_paybill_number),
+  mpesa_consumer_secret = CONCAT('mpesa_cs_', mpesa_paybill_number),
+  sasapay_client_id     = CONCAT('sasapay_cid_', sasapay_till_number),
+  sasapay_client_secret = CONCAT('sasapay_cs_', sasapay_till_number);
+
 -- migrate:down
 
 DELETE FROM merchants

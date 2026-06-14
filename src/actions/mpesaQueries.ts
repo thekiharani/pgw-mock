@@ -1,4 +1,3 @@
-/** Mirrors app/actions/mpesa_queries.py. */
 import { and, eq, sql } from 'drizzle-orm';
 
 import type { Executor } from '@/db/client.js';
@@ -33,10 +32,21 @@ export async function getMerchantByMpesaPaybill(
   return rows[0] ?? null;
 }
 
-/**
- * Atomically add `delta` (signed) to merchant.mpesa_balance.
- * Returns [applied, balanceString]. For debits the balance can never go < 0.
- */
+export async function getMerchantByMpesaConsumerKey(
+  exec: Executor,
+  consumerKey: string,
+): Promise<{ merchant_id: string; consumer_secret: string | null } | null> {
+  const rows = await exec
+    .select({
+      merchant_id: merchants.id,
+      consumer_secret: merchants.mpesaConsumerSecret,
+    })
+    .from(merchants)
+    .where(eq(merchants.mpesaConsumerKey, consumerKey))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function applyMpesaBalanceDelta(
   exec: Executor,
   merchantId: string,

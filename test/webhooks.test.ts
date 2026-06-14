@@ -1,9 +1,7 @@
-/** Exercises the REAL postWebhook (bypasses the global mock) against a stub server. */
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-// Bypass the global vi.mock('@/utils/webhooks.js') from setup.ts.
 const { postWebhook } =
   await vi.importActual<typeof import('@/utils/webhooks.js')>('@/utils/webhooks.js');
 
@@ -42,14 +40,14 @@ describe('postWebhook', () => {
     expect(res.message).toContain('Webhook sent to');
   });
 
-  it('non-dict JSON body is normalized to null', async () => {
+  it('normalizes a non-dict JSON body to null', async () => {
     handler = () => ({ status: 200, body: '[1,2,3]' });
     const res = await postWebhook(`${base}/arr`, {});
     expect(res.status).toBe(200);
     expect(res.body).toBeNull();
   });
 
-  it('non-JSON body is normalized to null', async () => {
+  it('normalizes a non-JSON body to null', async () => {
     handler = () => ({ status: 200, body: 'plain text', contentType: 'text/plain' });
     const res = await postWebhook(`${base}/text`, {});
     expect(res.body).toBeNull();
@@ -63,10 +61,9 @@ describe('postWebhook', () => {
   });
 
   it('unreachable host retries then reports failure', async () => {
-    // Nothing listening on this port -> connection refused -> retries.
     const res = await postWebhook('http://127.0.0.1:1/never', {});
     expect(res.status).toBe(500);
-    expect(res.attempts).toBe(2); // WEBHOOK_MAX_ATTEMPTS default
+    expect(res.attempts).toBe(2);
     expect(res.body).toBeNull();
     expect(res.message).toContain('Webhook failed to send to');
   });

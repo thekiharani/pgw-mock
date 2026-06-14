@@ -1,4 +1,3 @@
-/** Ports tests/test_schemas.py — direct Zod schema validation. */
 import { describe, expect, it } from 'vitest';
 
 import {

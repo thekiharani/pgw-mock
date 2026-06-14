@@ -1,4 +1,3 @@
-/** Higher-value M-Pesa edge paths: C2B validation rejection + transaction-status success. */
 import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,8 +19,6 @@ describe('C2B validation gate', () => {
   it('a validation URL that rejects (ResultCode != 0) suppresses the confirmation callback', async () => {
     const validationUrl = 'https://example.com/validate';
 
-    // The validation webhook responds with a rejecting ResultCode; everything
-    // else behaves normally.
     mockedWebhook.mockImplementation(async (url: string) => ({
       message: `Webhook sent to ${url}`,
       status: 200,
@@ -30,7 +27,7 @@ describe('C2B validation gate', () => {
     }));
 
     await post(
-      '/mpesa/c2b/v1/registerurl',
+      '/mpesa/mpesa/c2b/v1/registerurl',
       {
         ShortCode: MPESA_COLLECTION_PAYBILL,
         ResponseType: 'Completed',
@@ -41,7 +38,7 @@ describe('C2B validation gate', () => {
     );
 
     await post(
-      '/mpesa/c2b/v2/simulate',
+      '/mpesa/mpesa/c2b/v1/simulate',
       {
         ShortCode: MPESA_COLLECTION_PAYBILL,
         CommandID: 'CustomerPayBillOnline',
@@ -56,13 +53,12 @@ describe('C2B validation gate', () => {
     const deliveries = (await get('/mock/callback-deliveries')).json.data;
     const c2b = deliveries.filter((d: any) => d.flow === 'c2b');
     expect(c2b.some((d: any) => d.eventType === 'validation')).toBe(true);
-    // Confirmation must be blocked because validation rejected it.
     expect(c2b.some((d: any) => d.eventType === 'confirmation')).toBe(false);
   });
 
   it('a validation URL that accepts lets the confirmation through', async () => {
     await post(
-      '/mpesa/c2b/v1/registerurl',
+      '/mpesa/mpesa/c2b/v1/registerurl',
       {
         ShortCode: MPESA_COLLECTION_PAYBILL,
         ResponseType: 'Completed',
@@ -72,7 +68,7 @@ describe('C2B validation gate', () => {
       auth,
     );
     await post(
-      '/mpesa/c2b/v2/simulate',
+      '/mpesa/mpesa/c2b/v1/simulate',
       {
         ShortCode: MPESA_COLLECTION_PAYBILL,
         CommandID: 'CustomerPayBillOnline',
@@ -93,7 +89,7 @@ describe('C2B validation gate', () => {
 describe('transaction status — success envelope', () => {
   it('reflects a completed transaction and delivers a Result callback', async () => {
     await post(
-      '/mpesa/c2b/v2/simulate',
+      '/mpesa/mpesa/c2b/v1/simulate',
       {
         ShortCode: MPESA_COLLECTION_PAYBILL,
         CommandID: 'CustomerPayBillOnline',
@@ -113,7 +109,7 @@ describe('transaction status — success envelope', () => {
     const code = rows[0]!.code;
 
     const res = await post(
-      '/mpesa/transactionstatus/v1/query',
+      '/mpesa/mpesa/transactionstatus/v1/query',
       {
         Initiator: 'init',
         SecurityCredential: 'sec',

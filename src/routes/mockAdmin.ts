@@ -1,4 +1,3 @@
-/** Mock control API. Mirrors app/routes/mock_admin.py. Mounted at /mock. */
 import { desc } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';

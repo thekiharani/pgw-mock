@@ -1,4 +1,3 @@
-/** M-Pesa/Daraja request schemas. Mirrors app/schemas/mpesa.py. */
 import { z } from 'zod';
 
 import {
@@ -31,9 +30,6 @@ export const STANDING_ORDER_FREQUENCIES = new Set(['1', '2', '3', '4', '5', '6']
 export const IDENTIFIER_TYPES = new Set(['1', '2', '4']);
 export const QR_TRX_CODES = new Set(['BG', 'WA', 'PB', 'SM', 'SB']);
 
-// --- field builders -------------------------------------------------------
-
-/** Optional command-id field: null/absent passes; otherwise must be in `allowed`. */
 function optionalCommandId(allowed: Set<string>) {
   return z
     .union([z.string(), z.number(), z.null()])
@@ -55,7 +51,6 @@ function optionalCommandId(allowed: Set<string>) {
     });
 }
 
-/** Optional identifier-type field ("1"|"2"|"4"). */
 function optionalIdentifierType(message: string) {
   return z
     .union([z.string(), z.number(), z.null()])
@@ -78,7 +73,6 @@ function timestampField() {
     .transform((v, ctx): string | null => {
       if (v === null || v === undefined) return null;
       const raw = String(v).trim();
-      // YYYYMMDDHHMMSS
       if (!/^\d{14}$/.test(raw) || Number.isNaN(parseDateTime(raw))) {
         ctx.addIssue({ code: 'custom', message: 'Timestamp must use YYYYMMDDHHMMSS format' });
         return z.NEVER;
@@ -106,8 +100,6 @@ function parseDate8(raw: string): number {
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return NaN;
   return Date.UTC(y, mo - 1, d);
 }
-
-// --- schemas --------------------------------------------------------------
 
 export const STKPushRequest = z
   .object({
@@ -408,7 +400,6 @@ export const StandingOrderRequest = z
   })
   .strict();
 
-// Helper that wraps optionalCommandId with explicit membership set.
 function optionalCommandIdWithMembership(allowed: Set<string>) {
   return optionalCommandId(allowed);
 }
