@@ -1,0 +1,45 @@
+services:
+  pgw-db:
+    image: mysql:8.4
+    container_name: pgw-mock-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-norialabs_payments_gateways}
+    ports:
+      - '${DB_PORT:-3306}:3306'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-uroot', '-p${DB_PASSWORD:-root}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - pgw-db-data:/var/lib/mysql
+
+  pgw-mock:
+    build: .
+    image: pgw-mock:latest
+    container_name: pgw-mock
+    restart: unless-stopped
+    depends_on:
+      pgw-db:
+        condition: service_healthy
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 4002
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      STRICT_PROVIDER_AUTH: ${STRICT_PROVIDER_AUTH:-true}
+      STRICT_PROVIDER_VALIDATION: ${STRICT_PROVIDER_VALIDATION:-true}
+      RELAXED_WAAS_KYC: ${RELAXED_WAAS_KYC:-false}
+      SERVICE_URL: ${SERVICE_URL:-http://localhost:4002}
+      PAYMENTS_SERVICE_URL: ${PAYMENTS_SERVICE_URL:-http://localhost:4001}
+      DATABASE_URL: 'mysql://root:${DB_PASSWORD:-root}@pgw-db:3306/${DB_NAME:-norialabs_payments_gateways}'
+      DB_HOST: pgw-db
+      DB_PORT: 3306
+      RUN_MIGRATIONS: 'true'
+      WAIT_FOR_DB: 'true'
+    ports:
+      - '4102:4002'
+
+volumes:
+  pgw-db-data:

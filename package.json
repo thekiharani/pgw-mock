@@ -1,0 +1,48 @@
+{
+  "name": "pgw-mock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Noria Payments API Mock — Fastify replica",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.6.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "lint": "eslint . && prettier --check .",
+    "fmt": "prettier --write . && eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:up": "dbmate up",
+    "db:down": "dbmate down",
+    "db:new": "dbmate new",
+    "db:drop": "dbmate drop",
+    "db:introspect": "drizzle-kit introspect"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "^5.8.5",
+    "fastify-type-provider-zod": "^6.1.0",
+    "jose": "^6.1.0",
+    "mysql2": "^3.22.5",
+    "ulid": "^3.0.2",
+    "uuid": "^14.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^24.10.1",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.1.8"
+  }
+}
