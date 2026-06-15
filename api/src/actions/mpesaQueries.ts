@@ -61,7 +61,7 @@ export async function applyMpesaBalanceDelta(
     .update(merchants)
     .set({ mpesaBalance: sql`${merchants.mpesaBalance} + ${deltaStr}` })
     .where(and(...conditions));
-  const affected = (res as any)[0]?.affectedRows ?? 0;
+  const affected = res.rowCount ?? 0;
   const current = await exec
     .select({ bal: merchants.mpesaBalance })
     .from(merchants)

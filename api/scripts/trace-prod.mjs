@@ -15,7 +15,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 const cwd = process.cwd();
 const OUT = resolve(cwd, 'prod');
 
-const FORCE_INCLUDE = ['mysql2', '@scalar/fastify-api-reference', '@fastify/static'];
+const FORCE_INCLUDE = ['pg', '@scalar/fastify-api-reference', '@fastify/static'];
 
 await rm(OUT, { recursive: true, force: true });
 

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, like, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
 import type { Executor } from '@/db/client.js';
 import { merchants, transactions } from '@/db/schema.js';
@@ -7,8 +7,8 @@ type MerchantInsert = typeof merchants.$inferInsert;
 type MerchantRow = typeof merchants.$inferSelect;
 type TransactionRow = typeof transactions.$inferSelect;
 
-function affectedRows(result: unknown): number {
-  return (result as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0;
+function affectedRows(result: { rowCount: number | null }): number {
+  return result.rowCount ?? 0;
 }
 
 export interface MerchantListOptions {
@@ -26,10 +26,10 @@ export async function listMerchants(
     const pattern = `%${opts.q}%`;
     conditions.push(
       or(
-        like(merchants.name, pattern),
-        like(merchants.email, pattern),
-        like(merchants.mpesaPaybillNumber, pattern),
-        like(merchants.sasapayTillNumber, pattern),
+        ilike(merchants.name, pattern),
+        ilike(merchants.email, pattern),
+        ilike(merchants.mpesaPaybillNumber, pattern),
+        ilike(merchants.sasapayTillNumber, pattern),
       )!,
     );
   }
@@ -119,8 +119,8 @@ export async function listTransactions(
     const pattern = `%${opts.q}%`;
     conditions.push(
       or(
-        like(transactions.transactionCode, pattern),
-        like(transactions.merchantReference, pattern),
+        ilike(transactions.transactionCode, pattern),
+        ilike(transactions.merchantReference, pattern),
       )!,
     );
   }

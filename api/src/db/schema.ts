@@ -1,16 +1,16 @@
 import {
   boolean,
-  datetime,
-  decimal,
-  int,
-  json,
-  mysqlEnum,
-  mysqlTable,
+  integer,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
   text,
+  timestamp,
   varchar,
-} from 'drizzle-orm/mysql-core';
+} from 'drizzle-orm/pg-core';
 
-export const merchants = mysqlTable('merchants', {
+export const merchants = pgTable('merchants', {
   id: varchar('id', { length: 36 }).primaryKey(),
   name: varchar('name', { length: 128 }).notNull(),
   email: varchar('email', { length: 256 }),
@@ -21,15 +21,15 @@ export const merchants = mysqlTable('merchants', {
   mpesaConsumerSecret: varchar('mpesa_consumer_secret', { length: 64 }),
   sasapayClientId: varchar('sasapay_client_id', { length: 64 }),
   sasapayClientSecret: varchar('sasapay_client_secret', { length: 64 }),
-  mpesaBalance: decimal('mpesa_balance', { precision: 20, scale: 2 }).notNull(),
-  sasapayBalance: decimal('sasapay_balance', { precision: 20, scale: 2 }).notNull(),
-  meta: json('meta').$type<Record<string, any> | null>(),
-  createdAt: datetime('created_at'),
-  updatedAt: datetime('updated_at'),
-  deletedAt: datetime('deleted_at'),
+  mpesaBalance: numeric('mpesa_balance', { precision: 20, scale: 2 }).notNull(),
+  sasapayBalance: numeric('sasapay_balance', { precision: 20, scale: 2 }).notNull(),
+  meta: jsonb('meta').$type<Record<string, any> | null>(),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
+  deletedAt: timestamp('deleted_at'),
 });
 
-export const transactions = mysqlTable('transactions', {
+export const transactions = pgTable('transactions', {
   id: varchar('id', { length: 36 }).primaryKey(),
   transactionCode: varchar('transaction_code', { length: 32 }).notNull(),
   linkedTransactionCode: varchar('linked_transaction_code', { length: 32 }),
@@ -46,31 +46,31 @@ export const transactions = mysqlTable('transactions', {
   senderAccountNumber: varchar('sender_account_number', { length: 32 }).notNull(),
   recipientName: varchar('recipient_name', { length: 128 }),
   recipientAccountNumber: varchar('recipient_account_number', { length: 32 }).notNull(),
-  amount: decimal('amount', { precision: 20, scale: 2 }).notNull(),
-  fees: decimal('fees', { precision: 20, scale: 2 }).notNull(),
-  merchantBalance: decimal('merchant_balance', { precision: 20, scale: 2 }).notNull(),
+  amount: numeric('amount', { precision: 20, scale: 2 }).notNull(),
+  fees: numeric('fees', { precision: 20, scale: 2 }).notNull(),
+  merchantBalance: numeric('merchant_balance', { precision: 20, scale: 2 }).notNull(),
   type: varchar('type', { length: 32 }),
   subType: varchar('sub_type', { length: 32 }),
   category: varchar('category', { length: 32 }).notNull(),
   status: varchar('status', { length: 32 }).notNull(),
-  meta: json('meta').$type<Record<string, any> | null>(),
-  createdAt: datetime('created_at'),
-  updatedAt: datetime('updated_at'),
-  deletedAt: datetime('deleted_at'),
+  meta: jsonb('meta').$type<Record<string, any> | null>(),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
+  deletedAt: timestamp('deleted_at'),
 });
 
-export const mockAccessTokens = mysqlTable('mock_access_tokens', {
+export const mockAccessTokens = pgTable('mock_access_tokens', {
   id: varchar('id', { length: 36 }).primaryKey(),
   provider: varchar('provider', { length: 32 }).notNull(),
   token: varchar('token', { length: 512 }).notNull(),
   scope: varchar('scope', { length: 256 }),
-  expiresAt: datetime('expires_at').notNull(),
-  revokedAt: datetime('revoked_at'),
-  meta: json('meta').$type<Record<string, any> | null>(),
-  createdAt: datetime('created_at'),
+  expiresAt: timestamp('expires_at').notNull(),
+  revokedAt: timestamp('revoked_at'),
+  meta: jsonb('meta').$type<Record<string, any> | null>(),
+  createdAt: timestamp('created_at'),
 });
 
-export const mockScenarios = mysqlTable('mock_scenarios', {
+export const mockScenarios = pgTable('mock_scenarios', {
   id: varchar('id', { length: 36 }).primaryKey(),
   provider: varchar('provider', { length: 32 }).notNull(),
   flow: varchar('flow', { length: 32 }).notNull(),
@@ -79,32 +79,34 @@ export const mockScenarios = mysqlTable('mock_scenarios', {
   resultCode: varchar('result_code', { length: 32 }).notNull(),
   resultDescription: varchar('result_description', { length: 256 }).notNull(),
   status: varchar('status', { length: 32 }).notNull(),
-  payload: json('payload').$type<Record<string, any> | null>(),
-  expiresAt: datetime('expires_at'),
-  createdAt: datetime('created_at'),
-  updatedAt: datetime('updated_at'),
+  payload: jsonb('payload').$type<Record<string, any> | null>(),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
 });
 
-export const callbackDeliveries = mysqlTable('callback_deliveries', {
+export const callbackDeliveries = pgTable('callback_deliveries', {
   id: varchar('id', { length: 36 }).primaryKey(),
   provider: varchar('provider', { length: 32 }).notNull(),
   flow: varchar('flow', { length: 32 }).notNull(),
   eventType: varchar('event_type', { length: 32 }).notNull(),
   transactionId: varchar('transaction_id', { length: 36 }),
   url: varchar('url', { length: 1024 }).notNull(),
-  payload: json('payload').$type<Record<string, any>>().notNull(),
+  payload: jsonb('payload').$type<Record<string, any>>().notNull(),
   status: varchar('status', { length: 32 }).notNull(),
-  attempts: int('attempts').notNull(),
-  lastStatusCode: int('last_status_code'),
+  attempts: integer('attempts').notNull(),
+  lastStatusCode: integer('last_status_code'),
   lastError: text('last_error'),
-  deliveredAt: datetime('delivered_at'),
-  createdAt: datetime('created_at'),
-  updatedAt: datetime('updated_at'),
+  deliveredAt: timestamp('delivered_at'),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
 });
 
-export const waasOnboardingRequests = mysqlTable('waas_onboarding_requests', {
+export const waasType = pgEnum('waas_type', ['personal', 'business']);
+
+export const waasOnboardingRequests = pgTable('waas_onboarding_requests', {
   id: varchar('id', { length: 36 }).primaryKey(),
-  type: mysqlEnum('type', ['personal', 'business']).notNull(),
+  type: waasType('type').notNull(),
   merchantCode: varchar('merchant_code', { length: 32 }).notNull(),
   mobileNumber: varchar('mobile_number', { length: 32 }).notNull(),
   callbackUrl: varchar('callback_url', { length: 1024 }),
@@ -112,38 +114,38 @@ export const waasOnboardingRequests = mysqlTable('waas_onboarding_requests', {
   accountNumber: varchar('account_number', { length: 32 }),
   otp: varchar('otp', { length: 16 }).notNull(),
   status: varchar('status', { length: 32 }).notNull(),
-  payload: json('payload').$type<any>(),
-  directors: json('directors').$type<any>(),
-  createdAt: datetime('created_at'),
-  updatedAt: datetime('updated_at'),
+  payload: jsonb('payload').$type<any>(),
+  directors: jsonb('directors').$type<any>(),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
 });
 
 // BetterAuth tables. Property keys are BetterAuth's field names (camelCase) and
 // must not change; the adapter resolves fields by key. Columns are snake_case.
-export const users = mysqlTable('users', {
+export const users = pgTable('users', {
   id: varchar('id', { length: 36 }).primaryKey(),
   name: varchar('name', { length: 256 }).notNull(),
   email: varchar('email', { length: 256 }).notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: varchar('image', { length: 1024 }),
-  createdAt: datetime('created_at', { mode: 'date' }).notNull(),
-  updatedAt: datetime('updated_at', { mode: 'date' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
-export const sessions = mysqlTable('sessions', {
+export const sessions = pgTable('sessions', {
   id: varchar('id', { length: 36 }).primaryKey(),
   userId: varchar('user_id', { length: 36 })
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   token: varchar('token', { length: 256 }).notNull().unique(),
-  expiresAt: datetime('expires_at', { mode: 'date' }).notNull(),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
   ipAddress: varchar('ip_address', { length: 64 }),
   userAgent: varchar('user_agent', { length: 512 }),
-  createdAt: datetime('created_at', { mode: 'date' }).notNull(),
-  updatedAt: datetime('updated_at', { mode: 'date' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
-export const accounts = mysqlTable('accounts', {
+export const accounts = pgTable('accounts', {
   id: varchar('id', { length: 36 }).primaryKey(),
   userId: varchar('user_id', { length: 36 })
     .notNull()
@@ -153,19 +155,19 @@ export const accounts = mysqlTable('accounts', {
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
-  accessTokenExpiresAt: datetime('access_token_expires_at', { mode: 'date' }),
-  refreshTokenExpiresAt: datetime('refresh_token_expires_at', { mode: 'date' }),
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { mode: 'date' }),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { mode: 'date' }),
   scope: varchar('scope', { length: 512 }),
   password: varchar('password', { length: 256 }),
-  createdAt: datetime('created_at', { mode: 'date' }).notNull(),
-  updatedAt: datetime('updated_at', { mode: 'date' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });
 
-export const verifications = mysqlTable('verifications', {
+export const verifications = pgTable('verifications', {
   id: varchar('id', { length: 36 }).primaryKey(),
   identifier: varchar('identifier', { length: 256 }).notNull(),
   value: varchar('value', { length: 512 }).notNull(),
-  expiresAt: datetime('expires_at', { mode: 'date' }).notNull(),
-  createdAt: datetime('created_at', { mode: 'date' }).notNull(),
-  updatedAt: datetime('updated_at', { mode: 'date' }).notNull(),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
 });

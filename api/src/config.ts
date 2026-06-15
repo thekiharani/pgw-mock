@@ -91,8 +91,8 @@ export interface Settings {
 function buildSettings(): Settings {
   const DATABASE_URL = envOptional('DATABASE_URL');
   const DB_HOST = envStr('DB_HOST', '127.0.0.1');
-  const DB_PORT = envInt('DB_PORT', 3306);
-  const DB_USER = envStr('DB_USER', 'root');
+  const DB_PORT = envInt('DB_PORT', 5432);
+  const DB_USER = envStr('DB_USER', 'postgres');
   const DB_PASSWORD = envStr('DB_PASSWORD', '');
   const DB_NAME = envStr('DB_NAME', 'pgw_mock');
 
@@ -142,7 +142,7 @@ function buildSettings(): Settings {
         return DATABASE_URL.replace(/^([a-z]+)\+[a-z0-9]+:\/\//i, '$1://');
       }
       const pwd = encodeURIComponent(DB_PASSWORD);
-      return `mysql://${DB_USER}:${pwd}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+      return `postgresql://${DB_USER}:${pwd}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
     },
   };
 }

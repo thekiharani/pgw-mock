@@ -4,9 +4,9 @@
 -- no password is stored. email_verified is preset so the OTP step is the only
 -- gate. With MAIL_DRIVER=console the OTP is printed to the server log.
 INSERT INTO users (id, name, email, email_verified) VALUES
-  ('019ec766-5000-7aaa-8000-000000000001', 'Noria Admin', 'admin@noria.co.ke', 1),
-  ('019ec766-5000-7aaa-8000-000000000002', 'Noria Ops', 'ops@noria.co.ke', 1),
-  ('019ec766-5000-7aaa-8000-000000000003', 'Noria Viewer', 'viewer@noria.co.ke', 1);
+  ('019ec766-5000-7aaa-8000-000000000001', 'Noria Admin', 'admin@noria.co.ke', true),
+  ('019ec766-5000-7aaa-8000-000000000002', 'Noria Ops', 'ops@noria.co.ke', true),
+  ('019ec766-5000-7aaa-8000-000000000003', 'Noria Viewer', 'viewer@noria.co.ke', true);
 
 INSERT INTO merchants
   (id, name, email, phone_number, mpesa_paybill_number, sasapay_till_number, mpesa_balance, sasapay_balance, meta)
@@ -276,5 +276,5 @@ UPDATE merchants SET
 DELETE FROM users WHERE email IN ('admin@noria.co.ke', 'ops@noria.co.ke', 'viewer@noria.co.ke');
 
 DELETE FROM merchants
-WHERE mpesa_paybill_number REGEXP '^(884|885|886|887)[0-9]{3}$'
-   OR sasapay_till_number REGEXP '^888[0-9]{3}$';
+WHERE mpesa_paybill_number ~ '^(884|885|886|887)[0-9]{3}$'
+   OR sasapay_till_number ~ '^888[0-9]{3}$';

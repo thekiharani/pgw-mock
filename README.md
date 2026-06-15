@@ -48,14 +48,14 @@ runs the API with `SERVE_DASHBOARD=true` so a single origin serves both.
 - Node 24 · TypeScript (ESM) · pnpm
 - **Fastify 5** web framework
 - **Zod** + `fastify-type-provider-zod` for request validation
-- **Drizzle ORM** (typed queries) on **MySQL** (`mysql2`)
+- **Drizzle ORM** (typed queries) on **PostgreSQL** (`pg`)
 - **dbmate** for migrations + seeding (raw SQL)
 - **Vitest** for tests (Fastify `inject`)
 
 ## Requirements
 
 - Node 24+, pnpm 11+
-- A MySQL 8.x database
+- A PostgreSQL 14+ database
 - `dbmate` on PATH (`brew install dbmate`) for migrations
 
 ## Quick start
@@ -63,7 +63,7 @@ runs the API with `SERVE_DASHBOARD=true` so a single origin serves both.
 ```bash
 cd api
 pnpm install
-cp .env.example .env          # adjust DATABASE_URL to your MySQL
+cp .env.example .env          # adjust DATABASE_URL to your PostgreSQL
 pnpm db:up                    # create schema + seed 250 merchants
 pnpm dev                      # starts on http://127.0.0.1:4200
 ```
@@ -82,7 +82,7 @@ STRICT_PROVIDER_AUTH=true
 STRICT_PROVIDER_VALIDATION=true
 RELAXED_WAAS_KYC=false
 MOCK_CALLBACK_DELAY_SECONDS=0
-DATABASE_URL=mysql://root:root@127.0.0.1:3306/pgw_mock
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/pgw_mock
 ```
 
 `DATABASE_URL` takes precedence; otherwise the URL is assembled from `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`. A SQLAlchemy-style `+driver` suffix is stripped automatically.
@@ -167,18 +167,18 @@ pnpm dev       # tsx watch
 pnpm build     # esbuild -> single-file ESM dist/index.js (no source maps)
 pnpm typecheck # tsc --noEmit (src + tests)
 pnpm start     # node dist/index.js
-pnpm test     # Vitest (requires a MySQL test DB; see vitest.config.ts)
+pnpm test     # Vitest (requires a PostgreSQL test DB; see vitest.config.ts)
 pnpm lint     # eslint + prettier --check
 pnpm fmt      # prettier --write + eslint --fix
 ```
 
-Tests run against a `pgw_mock_test` database (`TEST_DATABASE_URL`, default `mysql://root:pass_444888@127.0.0.1:3326/pgw_mock_test` — the shared `noria_mysql` container); the global setup runs `dbmate up` against it and each test resets fixtures.
+Tests run against a `pgw_mock_test` database (`TEST_DATABASE_URL`, default `postgresql://admin_444888:pass_444888@127.0.0.1:5452/pgw_mock_test` — the shared `noria_postgres` container); the global setup runs `dbmate up` against it and each test resets fixtures.
 
 ## Docker
 
 `compose.yml` runs **only the app** and joins the existing external `norialabs`
-network, reusing the MySQL (and Redis, when needed) containers already running
-there — it does not start its own database. Migrations run on start via
+network, reusing the PostgreSQL (and Redis, when needed) containers already
+running there — it does not start its own database. Migrations run on start via
 `RUN_MIGRATIONS=true`.
 
 ```bash
@@ -187,8 +187,8 @@ there — it does not start its own database. Migrations run on start via
 docker compose up --build
 ```
 
-In compose it connects to the existing `noria_mysql` container on the network
-(in-network `noria_mysql:3306`); credentials/db come from `.env`
+In compose it connects to the existing `noria_postgres` container on the network
+(in-network `noria_postgres:5432`); credentials/db come from `.env`
 (`DB_USER`/`DB_PASSWORD`/`DB_NAME`, default db `pgw_mock`). The app is published
 on host port `${HOST_PORT:-4300}` (container `4200`).
 
@@ -199,11 +199,11 @@ from `/app/public` (`SERVE_DASHBOARD=true`) with a history fallback to
 `/sasapay`, etc. Set `AUTH_BASE_URL`/`AUTH_TRUSTED_ORIGINS` to the public origin
 so the BetterAuth session cookie is same-origin.
 
-From the host (e.g. `pnpm dev`, `pnpm db:up`) reach the same MySQL via its
-published port — `127.0.0.1:3326` — as configured in `.env`.
+From the host (e.g. `pnpm dev`, `pnpm db:up`) reach the same PostgreSQL via its
+published port — `127.0.0.1:5452` — as configured in `.env`.
 
-> This service uses MySQL only; it has no Redis dependency, so nothing Redis is
-> started or required.
+> This service uses PostgreSQL only; it has no Redis dependency, so nothing Redis
+> is started or required.
 
 ## Notes
 

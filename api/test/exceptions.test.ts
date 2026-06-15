@@ -105,6 +105,6 @@ describe('common schema helpers', () => {
 
 describe('settings', () => {
   it('databaseUrl reflects DATABASE_URL (driver suffix stripped)', () => {
-    expect(settings.databaseUrl.startsWith('mysql://')).toBe(true);
+    expect(settings.databaseUrl.startsWith('postgresql://')).toBe(true);
   });
 });

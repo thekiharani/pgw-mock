@@ -59,7 +59,7 @@ export async function applySasapayBalanceDelta(
     .update(merchants)
     .set({ sasapayBalance: sql`${merchants.sasapayBalance} + ${deltaStr}` })
     .where(and(...conditions));
-  const affected = (res as any)[0]?.affectedRows ?? 0;
+  const affected = res.rowCount ?? 0;
   const current = await exec
     .select({ bal: merchants.sasapayBalance })
     .from(merchants)

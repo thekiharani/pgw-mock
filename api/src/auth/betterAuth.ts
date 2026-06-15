@@ -26,7 +26,7 @@ export const auth = betterAuth({
   trustedOrigins: settings.AUTH_TRUSTED_ORIGINS,
   advanced: { database: { generateId: () => uuid7() } },
   database: drizzleAdapter(db, {
-    provider: 'mysql',
+    provider: 'pg',
     schema: { user: users, session: sessions, account: accounts, verification: verifications },
   }),
   socialProviders,
