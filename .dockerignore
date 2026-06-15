@@ -1,35 +1,40 @@
-node_modules
-.pnpm-store
-dist
-prod
-*.tsbuildinfo
-drizzle
+# Dependencies / build output (any depth: api/, dashboard/, shared/)
+**/node_modules
+**/.pnpm-store
+**/dist
+**/prod
+**/*.tsbuildinfo
+**/drizzle
+**/coverage
+**/.vitest
 
 .git
 .gitignore
 .github
 
-.env
-.env.*
+# Env / secrets (the API .env is injected via compose env_file, not the image)
+**/.env
+**/.env.*
 
-test
-coverage
-.vitest
-vitest.config.ts
-tsconfig.check.json
+# Test + tooling not needed in the image
+**/test
+**/vitest.config.ts
+**/tsconfig.check.json
+**/eslint.config.js
+**/.prettierrc.json
+**/.prettierignore
+**/.editorconfig
 
-eslint.config.js
-.prettierrc.json
-.prettierignore
-.editorconfig
-
+# Docs / compose / docker meta
 README.md
-*.md
+**/*.md
+docs
 compose.yml
 .dockerignore
 Dockerfile
 
-*.log
+# Logs / caches / editor / OS
+**/*.log
 logs
 .cache
 .eslintcache

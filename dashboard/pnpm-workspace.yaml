@@ -1,0 +1,3 @@
+# Single-package pnpm settings (NOT a monorepo — no `packages:` list).
+allowBuilds:
+  esbuild: true

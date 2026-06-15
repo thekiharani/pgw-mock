@@ -2,53 +2,14 @@
   "name": "pgw-mock",
   "version": "0.1.0",
   "private": true,
-  "description": "Noria Payments API Mock — Fastify replica",
-  "type": "module",
-  "engines": {
-    "node": ">=22"
-  },
-  "packageManager": "pnpm@11.6.0",
+  "description": "Noria Payments API Mock — orchestrates the independent api/ and dashboard/ apps",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "node scripts/build.mjs",
-    "start": "node dist/index.js",
-    "typecheck": "tsc -p tsconfig.check.json",
-    "lint": "eslint . && prettier --check .",
-    "fmt": "prettier --write . && eslint . --fix",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage.enabled --coverage.provider=v8 --coverage.include='src/**'",
-    "db:up": "dbmate up",
-    "db:down": "dbmate down",
-    "db:new": "dbmate new",
-    "db:drop": "dbmate drop",
-    "db:introspect": "drizzle-kit introspect"
-  },
-  "dependencies": {
-    "@fastify/cors": "^11.2.0",
-    "@fastify/swagger": "^9.7.0",
-    "@scalar/fastify-api-reference": "^1.59.3",
-    "drizzle-orm": "^0.45.2",
-    "fastify": "^5.8.5",
-    "fastify-type-provider-zod": "^6.1.0",
-    "jose": "^6.1.0",
-    "mysql2": "^3.22.5",
-    "ulid": "^3.0.2",
-    "uuid": "^14.0.0",
-    "zod": "^4.4.3"
+    "dev": "concurrently -k -n api,web -c blue,magenta \"pnpm --dir api dev\" \"pnpm --dir dashboard dev\"",
+    "build": "pnpm --dir dashboard build && pnpm --dir api build",
+    "start": "SERVE_DASHBOARD=true DASHBOARD_DIST=../dashboard/dist AUTH_BASE_URL=http://localhost:4200 AUTH_TRUSTED_ORIGINS=http://localhost:4200,http://127.0.0.1:4200 pnpm --dir api start",
+    "install:all": "pnpm --dir api install && pnpm --dir dashboard install"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.0",
-    "@types/node": "^24.10.1",
-    "@vercel/nft": "^1.10.2",
-    "@vitest/coverage-v8": "^4.1.8",
-    "drizzle-kit": "^0.31.10",
-    "esbuild": "^0.28.1",
-    "eslint": "^9.39.0",
-    "prettier": "^3.6.2",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.0",
-    "vitest": "^4.1.8"
+    "concurrently": "^9.2.1"
   }
 }

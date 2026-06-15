@@ -11,6 +11,38 @@ It exposes mock flows for:
 - Daraja Bill Manager
 - Mock scenario controls and callback delivery inspection
 
+## Repository layout
+
+Two independent apps in one repo (not a monorepo / pnpm workspace), plus a
+shared types directory consumed via a TS path alias:
+
+```
+api/         Fastify mock gateway + management API (this service)
+dashboard/   Vite + React + TanStack + shadcn admin UI  (see Phase 4)
+shared/      Plain TS types shared by both, imported as @shared/* (../shared)
+```
+
+Each app installs, builds, and runs on its own. Run API commands from `api/`:
+
+```bash
+cd api && pnpm install && pnpm dev
+```
+
+### Root scripts (run both apps)
+
+The root `package.json` orchestrates the two apps (it shells into each via
+`pnpm --dir` — no workspace linking, still independent):
+
+```bash
+pnpm install:all   # install api/ and dashboard/
+pnpm dev           # API (:4200) + dashboard (:3200) in parallel (concurrently)
+pnpm build         # build dashboard/dist, then the api bundle
+pnpm start         # serve the bundled build on :4200 (Fastify serves the SPA + API)
+```
+
+In `dev` the dashboard (`:3200`) proxies `/api` → the API (`:4200`). `start`
+runs the API with `SERVE_DASHBOARD=true` so a single origin serves both.
+
 ## Stack
 
 - Node 24 · TypeScript (ESM) · pnpm
@@ -29,10 +61,11 @@ It exposes mock flows for:
 ## Quick start
 
 ```bash
+cd api
 pnpm install
 cp .env.example .env          # adjust DATABASE_URL to your MySQL
 pnpm db:up                    # create schema + seed 250 merchants
-pnpm dev                      # starts on http://127.0.0.1:4002
+pnpm dev                      # starts on http://127.0.0.1:4200
 ```
 
 ## Environment
@@ -41,9 +74,9 @@ Configuration is read from environment variables or `.env` (loaded automatically
 
 ```env
 APP_HOST=0.0.0.0
-APP_PORT=4002
+APP_PORT=4200
 LOG_LEVEL=INFO
-SERVICE_URL=http://127.0.0.1:4002
+SERVICE_URL=http://127.0.0.1:4200
 PAYMENTS_SERVICE_URL=http://127.0.0.1:4001
 STRICT_PROVIDER_AUTH=true
 STRICT_PROVIDER_VALIDATION=true
@@ -109,7 +142,7 @@ Migrations live in `db/migrations/`. The schema and the 250-merchant seed are se
 Create a scenario override:
 
 ```bash
-curl -X POST http://127.0.0.1:4002/mock/scenarios \
+curl -X POST http://127.0.0.1:4200/mock/scenarios \
   -H 'Content-Type: application/json' \
   -d '{"provider":"mpesa","flow":"stk","selectorType":"reference","selectorValue":"ORDER001","resultCode":"1037"}'
 ```
@@ -117,7 +150,7 @@ curl -X POST http://127.0.0.1:4002/mock/scenarios \
 Inspect callback deliveries:
 
 ```bash
-curl http://127.0.0.1:4002/mock/callback-deliveries
+curl http://127.0.0.1:4200/mock/callback-deliveries
 ```
 
 Scenario resolution priority: persisted DB scenario → `X-Mock-Result-Code` request header → amount-based code. Re-delivering the same callback event for a transaction is idempotent once delivered.
@@ -157,7 +190,14 @@ docker compose up --build
 In compose it connects to the existing `noria_mysql` container on the network
 (in-network `noria_mysql:3306`); credentials/db come from `.env`
 (`DB_USER`/`DB_PASSWORD`/`DB_NAME`, default db `pgw_mock`). The app is published
-on host port `${HOST_PORT:-4102}`.
+on host port `${HOST_PORT:-4300}` (container `4200`).
+
+The image is a **single service that serves both**: the Dockerfile builds the
+dashboard (`dashboard/dist`) and the API bundle, and the runtime serves the SPA
+from `/app/public` (`SERVE_DASHBOARD=true`) with a history fallback to
+`index.html` for client routes, alongside the API under `/api`, `/mpesa`,
+`/sasapay`, etc. Set `AUTH_BASE_URL`/`AUTH_TRUSTED_ORIGINS` to the public origin
+so the BetterAuth session cookie is same-origin.
 
 From the host (e.g. `pnpm dev`, `pnpm db:up`) reach the same MySQL via its
 published port — `127.0.0.1:3326` — as configured in `.env`.

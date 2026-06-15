@@ -26,16 +26,26 @@ services:
       migrate:
         condition: service_completed_successfully
     env_file:
-      - .env
+      - api/.env
     environment:
       APP_HOST: 0.0.0.0
-      APP_PORT: ${APP_PORT:-4002}
+      APP_PORT: ${APP_PORT:-4200}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      SERVICE_URL: ${SERVICE_URL:-http://localhost:4002}
+      SERVICE_URL: ${SERVICE_URL:-http://localhost:4200}
       PAYMENTS_SERVICE_URL: ${PAYMENTS_SERVICE_URL:-}
       STRICT_PROVIDER_AUTH: ${STRICT_PROVIDER_AUTH:-true}
       STRICT_PROVIDER_VALIDATION: ${STRICT_PROVIDER_VALIDATION:-true}
       RELAXED_WAAS_KYC: ${RELAXED_WAAS_KYC:-false}
+      SERVE_DASHBOARD: 'true'
+      DASHBOARD_DIST: /app/public
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-prod}
+      AUTH_BASE_URL: ${AUTH_BASE_URL:-http://localhost:4300}
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-http://localhost:4300}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MAIL_DRIVER: ${MAIL_DRIVER:-console}
+      MAIL_FROM: ${MAIL_FROM:-Noria Payments Mock <no-reply@noria.local>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       DATABASE_URL: ''
       DB_HOST: noria_mysql
       DB_PORT: '3306'
@@ -43,7 +53,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-pass_444888}
       DB_NAME: ${DB_NAME:-pgw_mock}
     ports:
-      - '${HOST_PORT:-4102}:4002'
+      - '${HOST_PORT:-4300}:4200'
     read_only: true
     tmpfs:
       - /tmp
