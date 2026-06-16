@@ -128,8 +128,45 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 256 }).notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: varchar('image', { length: 1024 }),
+  role: varchar('role', { length: 32 }).notNull().default('user'),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).notNull(),
+});
+
+export const merchantRole = pgEnum('merchant_role', ['owner', 'admin', 'member', 'viewer']);
+
+export const merchantMembers = pgTable('merchant_members', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  merchantId: varchar('merchant_id', { length: 36 })
+    .notNull()
+    .references(() => merchants.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  role: merchantRole('role').notNull().default('member'),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
+});
+
+export const merchantInvitations = pgTable('merchant_invitations', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  merchantId: varchar('merchant_id', { length: 36 })
+    .notNull()
+    .references(() => merchants.id, { onDelete: 'cascade' }),
+  email: varchar('email', { length: 256 }).notNull(),
+  role: merchantRole('role').notNull().default('member'),
+  token: varchar('token', { length: 64 }).notNull().unique(),
+  status: varchar('status', { length: 32 }).notNull().default('pending'),
+  invitedBy: varchar('invited_by', { length: 36 }).references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  acceptedBy: varchar('accepted_by', { length: 36 }).references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  expiresAt: timestamp('expires_at').notNull(),
+  acceptedAt: timestamp('accepted_at'),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
 });
 
 export const sessions = pgTable('sessions', {

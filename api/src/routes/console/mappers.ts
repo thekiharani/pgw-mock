@@ -1,3 +1,4 @@
+import type { MerchantRole } from '@shared/dto/member.js';
 import type { MerchantDto } from '@shared/dto/merchant.js';
 import type { TransactionDto } from '@shared/dto/transaction.js';
 
@@ -15,10 +16,11 @@ export function toIso(value: Date | string | null | undefined): string | null {
   return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
-export function toMerchantDto(row: MerchantRow): MerchantDto {
+export function toMerchantDto(row: MerchantRow, myRole: MerchantRole | null = null): MerchantDto {
   return {
     id: row.id,
     name: row.name,
+    myRole,
     email: row.email,
     phoneNumber: row.phoneNumber,
     mpesaPaybillNumber: row.mpesaPaybillNumber,

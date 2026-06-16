@@ -3,10 +3,10 @@
 -- Demo console users. Sign-in is email-OTP only (better-auth emailOTP plugin);
 -- no password is stored. email_verified is preset so the OTP step is the only
 -- gate. With MAIL_DRIVER=console the OTP is printed to the server log.
-INSERT INTO users (id, name, email, email_verified) VALUES
-  ('019ec766-5000-7aaa-8000-000000000001', 'Noria Admin', 'admin@noria.co.ke', true),
-  ('019ec766-5000-7aaa-8000-000000000002', 'Noria Ops', 'ops@noria.co.ke', true),
-  ('019ec766-5000-7aaa-8000-000000000003', 'Noria Viewer', 'viewer@noria.co.ke', true);
+INSERT INTO users (id, name, email, email_verified, role) VALUES
+  ('019ec766-5000-7aaa-8000-000000000001', 'Noria Admin', 'admin@noria.co.ke', true, 'admin'),
+  ('019ec766-5000-7aaa-8000-000000000002', 'Noria Ops', 'ops@noria.co.ke', true, 'user'),
+  ('019ec766-5000-7aaa-8000-000000000003', 'Noria Viewer', 'viewer@noria.co.ke', true, 'user');
 
 INSERT INTO merchants
   (id, name, email, phone_number, mpesa_paybill_number, sasapay_till_number, mpesa_balance, sasapay_balance, meta)
@@ -270,6 +270,15 @@ UPDATE merchants SET
   mpesa_consumer_secret = CONCAT('mpesa_cs_', mpesa_paybill_number),
   sasapay_client_id     = CONCAT('sasapay_cid_', sasapay_till_number),
   sasapay_client_secret = CONCAT('sasapay_cs_', sasapay_till_number);
+
+-- Demo memberships so per-merchant scoping is visible without the platform
+-- admin. admin@noria.co.ke is a global admin (sees everything) and needs none.
+-- Ops owns two tills + co-admins a third; Viewer is read-only on the first.
+INSERT INTO merchant_members (id, merchant_id, user_id, role) VALUES
+  ('019ec766-5100-7aaa-8000-000000000001', '019ec766-4e12-75fe-9569-0f38c7aa3055', '019ec766-5000-7aaa-8000-000000000002', 'owner'),
+  ('019ec766-5100-7aaa-8000-000000000002', '019ec766-4e12-75fe-9569-130f8e1ae5a8', '019ec766-5000-7aaa-8000-000000000002', 'owner'),
+  ('019ec766-5100-7aaa-8000-000000000003', '019ec766-4e12-75fe-9569-16ae5a10119f', '019ec766-5000-7aaa-8000-000000000002', 'admin'),
+  ('019ec766-5100-7aaa-8000-000000000004', '019ec766-4e12-75fe-9569-0f38c7aa3055', '019ec766-5000-7aaa-8000-000000000003', 'viewer');
 
 -- migrate:down
 

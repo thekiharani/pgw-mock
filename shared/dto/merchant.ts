@@ -1,6 +1,10 @@
+import type { MerchantRole } from './member.js';
+
 export interface MerchantDto {
   id: string;
   name: string;
+  // The caller's role on this merchant; platform admins resolve to 'owner'.
+  myRole: MerchantRole | null;
   email: string | null;
   phoneNumber: string | null;
   mpesaPaybillNumber: string;

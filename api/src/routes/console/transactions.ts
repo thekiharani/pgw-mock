@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import { listTransactions } from '@/actions/console.js';
+import { isPlatformAdmin, requireMerchantAccess } from '@/auth/access.js';
 import { db } from '@/db/client.js';
 import { toTransactionDto } from '@/routes/console/mappers.js';
 
@@ -22,6 +23,12 @@ export async function transactionConsoleRoutes(app: FastifyInstance): Promise<vo
       const { page, pageSize, merchantId, gateway, status, q } = request.query as z.infer<
         typeof ListQuery
       >;
+      const session = request.authSession!;
+      const admin = isPlatformAdmin(session);
+      // A merchant filter must be one the caller can actually see.
+      if (merchantId && !admin) {
+        await requireMerchantAccess(db, session, merchantId, 'viewer');
+      }
       const { rows, total } = await listTransactions(db, {
         page,
         pageSize,
@@ -29,6 +36,8 @@ export async function transactionConsoleRoutes(app: FastifyInstance): Promise<vo
         gateway,
         status,
         q,
+        userId: session.user.id,
+        isAdmin: admin,
       });
       return { data: rows.map(toTransactionDto), page, pageSize, total };
     },

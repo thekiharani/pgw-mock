@@ -32,7 +32,9 @@ describe('console management API (/api/console)', () => {
 
   beforeAll(async () => {
     const app = await getApp();
-    cookie = await signInAndGetCookie(app, 'console-admin@example.com');
+    // Seeded platform admin — sees and manages every merchant, so the
+    // list/get/update/delete assertions below are not blocked by scoping.
+    cookie = await signInAndGetCookie(app, 'admin@noria.co.ke');
   });
 
   it('rejects unauthenticated requests', async () => {

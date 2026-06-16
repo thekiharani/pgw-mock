@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import {
-  createMerchant,
+  createMerchantOwnedBy,
   getMerchantById,
   listMerchants,
   merchantExistsByPaybill,
@@ -10,6 +10,7 @@ import {
   softDeleteMerchant,
   updateMerchant,
 } from '@/actions/console.js';
+import { isPlatformAdmin, requireMerchantAccess } from '@/auth/access.js';
 import { db } from '@/db/client.js';
 import { merchants } from '@/db/schema.js';
 import { AppError } from '@/errors.js';
@@ -69,16 +70,24 @@ export async function merchantConsoleRoutes(app: FastifyInstance): Promise<void>
     { schema: { querystring: ListQuery, tags: ['Console'] } },
     async (request) => {
       const { page, pageSize, q } = request.query as z.infer<typeof ListQuery>;
-      const { rows, total } = await listMerchants(db, { page, pageSize, q });
-      return { data: rows.map(toMerchantDto), page, pageSize, total };
+      const session = request.authSession!;
+      const { rows, total } = await listMerchants(db, {
+        page,
+        pageSize,
+        q,
+        userId: session.user.id,
+        isAdmin: isPlatformAdmin(session),
+      });
+      return { data: rows.map((row) => toMerchantDto(row, row.myRole)), page, pageSize, total };
     },
   );
 
   app.get('/merchants/:id', { schema: { params: IdParam, tags: ['Console'] } }, async (request) => {
     const { id } = request.params as z.infer<typeof IdParam>;
+    const myRole = await requireMerchantAccess(db, request.authSession!, id, 'viewer');
     const row = await getMerchantById(db, id);
     if (!row) throw notFound();
-    return toMerchantDto(row);
+    return toMerchantDto(row, myRole);
   });
 
   app.post(
@@ -93,24 +102,29 @@ export async function merchantConsoleRoutes(app: FastifyInstance): Promise<void>
         throw new AppError({ statusCode: 409, message: 'sasapayTillNumber already in use' });
       }
       const id = uuid7();
-      await createMerchant(db, {
-        id,
-        name: body.name,
-        email: body.email ?? null,
-        phoneNumber: body.phoneNumber ?? null,
-        mpesaPaybillNumber: body.mpesaPaybillNumber,
-        sasapayTillNumber: body.sasapayTillNumber,
-        mpesaConsumerKey: body.mpesaConsumerKey ?? null,
-        mpesaConsumerSecret: body.mpesaConsumerSecret ?? null,
-        sasapayClientId: body.sasapayClientId ?? null,
-        sasapayClientSecret: body.sasapayClientSecret ?? null,
-        mpesaBalance: body.mpesaBalance ?? '0',
-        sasapayBalance: body.sasapayBalance ?? '0',
-        meta: body.meta ?? null,
-      });
+      await createMerchantOwnedBy(
+        db,
+        {
+          id,
+          name: body.name,
+          email: body.email ?? null,
+          phoneNumber: body.phoneNumber ?? null,
+          mpesaPaybillNumber: body.mpesaPaybillNumber,
+          sasapayTillNumber: body.sasapayTillNumber,
+          mpesaConsumerKey: body.mpesaConsumerKey ?? null,
+          mpesaConsumerSecret: body.mpesaConsumerSecret ?? null,
+          sasapayClientId: body.sasapayClientId ?? null,
+          sasapayClientSecret: body.sasapayClientSecret ?? null,
+          mpesaBalance: body.mpesaBalance ?? '0',
+          sasapayBalance: body.sasapayBalance ?? '0',
+          meta: body.meta ?? null,
+        },
+        request.authSession!.user.id,
+        uuid7(),
+      );
       const row = await getMerchantById(db, id);
       reply.code(201);
-      return toMerchantDto(row!);
+      return toMerchantDto(row!, 'owner');
     },
   );
 
@@ -119,7 +133,7 @@ export async function merchantConsoleRoutes(app: FastifyInstance): Promise<void>
     { schema: { params: IdParam, body: UpdateBody, tags: ['Console'] } },
     async (request) => {
       const { id } = request.params as z.infer<typeof IdParam>;
-      if (!(await getMerchantById(db, id))) throw notFound();
+      const myRole = await requireMerchantAccess(db, request.authSession!, id, 'admin');
 
       const body = request.body as z.infer<typeof UpdateBody>;
       const patch: Partial<MerchantInsert> = {};
@@ -139,7 +153,7 @@ export async function merchantConsoleRoutes(app: FastifyInstance): Promise<void>
 
       if (Object.keys(patch).length > 0) await updateMerchant(db, id, patch);
       const row = await getMerchantById(db, id);
-      return toMerchantDto(row!);
+      return toMerchantDto(row!, myRole);
     },
   );
 
@@ -148,6 +162,7 @@ export async function merchantConsoleRoutes(app: FastifyInstance): Promise<void>
     { schema: { params: IdParam, tags: ['Console'] } },
     async (request) => {
       const { id } = request.params as z.infer<typeof IdParam>;
+      await requireMerchantAccess(db, request.authSession!, id, 'owner');
       const affected = await softDeleteMerchant(db, id);
       if (!affected) throw notFound();
       return { success: true };
@@ -159,7 +174,7 @@ export async function merchantConsoleRoutes(app: FastifyInstance): Promise<void>
     { schema: { params: IdParam, tags: ['Console'] } },
     async (request) => {
       const { id } = request.params as z.infer<typeof IdParam>;
-      if (!(await getMerchantById(db, id))) throw notFound();
+      await requireMerchantAccess(db, request.authSession!, id, 'member');
       const mpesaConsumerKey = generateDarajaToken();
       const mpesaConsumerSecret = generateDarajaToken();
       await updateMerchant(db, id, { mpesaConsumerKey, mpesaConsumerSecret });
@@ -172,7 +187,7 @@ export async function merchantConsoleRoutes(app: FastifyInstance): Promise<void>
     { schema: { params: IdParam, tags: ['Console'] } },
     async (request) => {
       const { id } = request.params as z.infer<typeof IdParam>;
-      if (!(await getMerchantById(db, id))) throw notFound();
+      await requireMerchantAccess(db, request.authSession!, id, 'member');
       const sasapayClientId = generateDarajaToken();
       const sasapayClientSecret = generateDarajaToken();
       await updateMerchant(db, id, { sasapayClientId, sasapayClientSecret });

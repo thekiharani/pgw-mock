@@ -68,6 +68,7 @@ export interface Settings {
   AUTH_SECRET: string;
   AUTH_BASE_URL: string;
   AUTH_TRUSTED_ORIGINS: string[];
+  DASHBOARD_URL: string;
   GOOGLE_CLIENT_ID: string | null;
   GOOGLE_CLIENT_SECRET: string | null;
   MAIL_DRIVER: 'console' | 'smtp' | 'resend' | 'ses';
@@ -120,6 +121,8 @@ function buildSettings(): Settings {
     AUTH_SECRET: envStr('AUTH_SECRET', 'dev-insecure-secret-change-me'),
     AUTH_BASE_URL: envStr('AUTH_BASE_URL', 'http://localhost:3200'),
     AUTH_TRUSTED_ORIGINS: envList('AUTH_TRUSTED_ORIGINS', ['http://localhost:3200']),
+    // Public origin the dashboard is served from; used to build invite links.
+    DASHBOARD_URL: envStr('DASHBOARD_URL', envStr('AUTH_BASE_URL', 'http://localhost:3200')),
     GOOGLE_CLIENT_ID: envOptional('GOOGLE_CLIENT_ID'),
     GOOGLE_CLIENT_SECRET: envOptional('GOOGLE_CLIENT_SECRET'),
     MAIL_DRIVER: envStr('MAIL_DRIVER', 'console') as Settings['MAIL_DRIVER'],

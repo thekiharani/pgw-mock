@@ -29,6 +29,13 @@ export const auth = betterAuth({
     provider: 'pg',
     schema: { user: users, session: sessions, account: accounts, verification: verifications },
   }),
+  // Surface the global platform role on the session user. input:false stops
+  // users self-assigning a role at sign-up; new accounts default to 'user'.
+  user: {
+    additionalFields: {
+      role: { type: 'string', input: false, defaultValue: 'user' },
+    },
+  },
   socialProviders,
   plugins: [
     emailOTP({

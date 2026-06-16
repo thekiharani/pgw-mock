@@ -43,6 +43,29 @@ pnpm start         # serve the bundled build on :4200 (Fastify serves the SPA + 
 In `dev` the dashboard (`:3200`) proxies `/api` → the API (`:4200`). `start`
 runs the API with `SERVE_DASHBOARD=true` so a single origin serves both.
 
+### Console access & collaboration
+
+The console is multi-tenant. Each merchant (its M-Pesa paybill + SasaPay till)
+is a **resource** owned by the user who created it; sign-in is email-OTP only.
+
+- A signed-in user sees and manages **only the merchants they belong to** — the
+  way the Daraja / SasaPay portals work. Creating a merchant makes you its
+  `owner`.
+- Per-merchant roles: `owner` (full control + delete), `admin` (edit + manage
+  members), `member` (rotate credentials + view), `viewer` (read-only).
+- Owners/admins can **invite collaborators** by email with a role. The invite
+  email carries an accept link (`DASHBOARD_URL/invite/<token>`); the invitee
+  signs in via OTP — creating their account if new — and auto-joins. With
+  `MAIL_DRIVER=console` the link prints to the server log.
+- A user with the **global** role `admin` (seeded `admin@noria.co.ke`) is a
+  platform admin and sees/manages every merchant. Admins get an extra **Admin**
+  nav section: an **Overview** dashboard (platform-wide totals + recent
+  transactions) and **Users** management (search users, promote/demote the
+  platform-admin role, and grant/revoke any user's per-merchant access).
+
+Seeded console users: `admin@noria.co.ke` (platform admin), `ops@noria.co.ke`
+(owns/co-admins a few merchants), `viewer@noria.co.ke` (viewer on one).
+
 ## Stack
 
 - Node 24 · TypeScript (ESM) · pnpm
@@ -82,6 +105,7 @@ STRICT_PROVIDER_AUTH=true
 STRICT_PROVIDER_VALIDATION=true
 RELAXED_WAAS_KYC=false
 MOCK_CALLBACK_DELAY_SECONDS=0
+DASHBOARD_URL=http://localhost:3200   # base for invite accept links (defaults to AUTH_BASE_URL)
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/pgw_mock
 ```
 

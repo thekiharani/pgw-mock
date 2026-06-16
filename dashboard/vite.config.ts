@@ -15,6 +15,22 @@ export default defineConfig({
       '@shared': path.resolve(root, '../shared'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split stable vendor code out of the app bundle so each chunk stays
+        // well under the 500 kB warning threshold and caches independently.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('@tanstack')) return 'tanstack';
+          if (id.includes('@radix-ui')) return 'radix';
+          if (id.includes('better-auth')) return 'auth';
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
+          return 'vendor';
+        },
+      },
+    },
+  },
   server: {
     port: 3200,
     proxy: {

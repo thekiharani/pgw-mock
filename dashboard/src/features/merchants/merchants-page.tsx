@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Plus, Search } from 'lucide-react';
+import { Building2, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 
+import { RoleBadge } from '@/components/role-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { usePlatformAdmin } from '@/lib/auth-client';
 import { formatMoney } from '@/lib/utils';
 import { MerchantFormDialog } from '@/features/merchants/merchant-form-dialog';
 
@@ -23,6 +25,7 @@ const PAGE_SIZE = 20;
 
 export function MerchantsPage() {
   const navigate = useNavigate();
+  const isAdmin = usePlatformAdmin();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -34,6 +37,7 @@ export function MerchantsPage() {
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  const cols = isAdmin ? 5 : 6;
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,7 +45,11 @@ export function MerchantsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Merchants</h1>
           <p className="text-sm text-muted-foreground">
-            {data ? `${data.total} total` : 'Manage merchants and their gateway credentials'}
+            {isAdmin
+              ? `Viewing all merchants · platform admin${data ? ` · ${data.total} total` : ''}`
+              : data
+                ? `${data.total} ${data.total === 1 ? 'merchant' : 'merchants'} you can access`
+                : 'Paybills & tills assigned to you'}
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -79,6 +87,7 @@ export function MerchantsPage() {
               <TableHead>Name</TableHead>
               <TableHead>Paybill</TableHead>
               <TableHead>Till</TableHead>
+              {!isAdmin && <TableHead>Your role</TableHead>}
               <TableHead className="text-right">M-Pesa</TableHead>
               <TableHead className="text-right">SasaPay</TableHead>
             </TableRow>
@@ -87,7 +96,7 @@ export function MerchantsPage() {
             {isLoading &&
               Array.from({ length: 6 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((__, j) => (
+                  {Array.from({ length: cols }).map((__, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-24" />
                     </TableCell>
@@ -97,7 +106,7 @@ export function MerchantsPage() {
 
             {isError && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-destructive">
+                <TableCell colSpan={cols} className="py-10 text-center text-sm text-destructive">
                   {(error as Error).message}
                 </TableCell>
               </TableRow>
@@ -105,8 +114,24 @@ export function MerchantsPage() {
 
             {data?.data.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  No merchants found.
+                <TableCell colSpan={cols} className="py-16 text-center">
+                  <div className="mx-auto flex max-w-xs flex-col items-center gap-2">
+                    <Building2 className="size-8 text-muted-foreground/50" />
+                    <p className="text-sm font-medium">
+                      {query ? 'No merchants match your search' : 'No merchants yet'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {query
+                        ? 'Try a different name, paybill, or till.'
+                        : 'Create a merchant to get a paybill & till — you’ll be its owner.'}
+                    </p>
+                    {!query && (
+                      <Button className="mt-1" size="sm" onClick={() => setCreateOpen(true)}>
+                        <Plus className="size-4" />
+                        New merchant
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -131,6 +156,9 @@ export function MerchantsPage() {
                 <TableCell>
                   <Badge variant="secondary">{merchant.sasapayTillNumber}</Badge>
                 </TableCell>
+                {!isAdmin && (
+                  <TableCell>{merchant.myRole && <RoleBadge role={merchant.myRole} />}</TableCell>
+                )}
                 <TableCell className="text-right tabular-nums">
                   {formatMoney(merchant.mpesaBalance)}
                 </TableCell>

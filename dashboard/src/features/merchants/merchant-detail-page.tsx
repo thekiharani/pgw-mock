@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 
 import type { MerchantDto } from '@shared/dto/merchant';
 
+import { RoleBadge } from '@/components/role-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,8 +29,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { formatDateTime, formatMoney } from '@/lib/utils';
+import { ROLE_RANK as RANK } from '@/lib/roles';
+import { CollaboratorsTab } from '@/features/merchants/collaborators-tab';
 import { MerchantFormDialog } from '@/features/merchants/merchant-form-dialog';
 
 export function MerchantDetailPage() {
@@ -87,67 +91,109 @@ export function MerchantDetailPage() {
     );
   }
 
+  const rank = merchant.myRole ? RANK[merchant.myRole] : 0;
+  const canRotate = rank >= RANK.member;
+  const canEdit = rank >= RANK.admin;
+  const canDelete = rank >= RANK.owner;
+
   return (
     <div className="flex flex-col gap-6">
       <BackLink />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{merchant.name}</h1>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-semibold tracking-tight">{merchant.name}</h1>
+            {merchant.myRole && <RoleBadge role={merchant.myRole} />}
+          </div>
           <p className="text-sm text-muted-foreground">
             {merchant.email ?? 'No email'} · {merchant.phoneNumber ?? 'No phone'}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <Pencil className="size-4" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="size-4" />
-            Delete
-          </Button>
-        </div>
+        {(canEdit || canDelete) && (
+          <div className="flex gap-2">
+            {canEdit && (
+              <Button variant="outline" onClick={() => setEditOpen(true)}>
+                <Pencil className="size-4" />
+                Edit
+              </Button>
+            )}
+            {canDelete && (
+              <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="size-4" />
+                Delete
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <BalanceCard
-          title="M-Pesa balance"
-          badge={merchant.mpesaPaybillNumber}
-          value={merchant.mpesaBalance}
-        />
-        <BalanceCard
-          title="SasaPay balance"
-          badge={merchant.sasapayTillNumber}
-          value={merchant.sasapayBalance}
-        />
-      </div>
+      <Tabs defaultValue="overview" className="flex flex-col gap-6">
+        <TabsList className="w-fit">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle className="text-base">M-Pesa (Daraja) credentials</CardTitle>
-          <RotateButton pending={rotateMpesa.isPending} onClick={() => rotateMpesa.mutate()} />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <CredentialField label="Consumer key" value={merchant.mpesaConsumerKey} />
-          <CredentialField label="Consumer secret" value={merchant.mpesaConsumerSecret} secret />
-        </CardContent>
-      </Card>
+        <TabsContent value="overview" className="flex flex-col gap-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <BalanceCard
+              title="M-Pesa balance"
+              badge={merchant.mpesaPaybillNumber}
+              value={merchant.mpesaBalance}
+            />
+            <BalanceCard
+              title="SasaPay balance"
+              badge={merchant.sasapayTillNumber}
+              value={merchant.sasapayBalance}
+            />
+          </div>
 
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle className="text-base">SasaPay credentials</CardTitle>
-          <RotateButton pending={rotateSasapay.isPending} onClick={() => rotateSasapay.mutate()} />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <CredentialField label="Client ID" value={merchant.sasapayClientId} />
-          <CredentialField label="Client secret" value={merchant.sasapayClientSecret} secret />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle className="text-base">M-Pesa (Daraja) credentials</CardTitle>
+              {canRotate && (
+                <RotateButton
+                  pending={rotateMpesa.isPending}
+                  onClick={() => rotateMpesa.mutate()}
+                />
+              )}
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <CredentialField label="Consumer key" value={merchant.mpesaConsumerKey} />
+              <CredentialField
+                label="Consumer secret"
+                value={merchant.mpesaConsumerSecret}
+                secret
+              />
+            </CardContent>
+          </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Created {formatDateTime(merchant.createdAt)} · Updated {formatDateTime(merchant.updatedAt)}
-      </p>
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle className="text-base">SasaPay credentials</CardTitle>
+              {canRotate && (
+                <RotateButton
+                  pending={rotateSasapay.isPending}
+                  onClick={() => rotateSasapay.mutate()}
+                />
+              )}
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <CredentialField label="Client ID" value={merchant.sasapayClientId} />
+              <CredentialField label="Client secret" value={merchant.sasapayClientSecret} secret />
+            </CardContent>
+          </Card>
+
+          <p className="text-xs text-muted-foreground">
+            Created {formatDateTime(merchant.createdAt)} · Updated{' '}
+            {formatDateTime(merchant.updatedAt)}
+          </p>
+        </TabsContent>
+
+        <TabsContent value="collaborators">
+          <CollaboratorsTab merchantId={merchant.id} />
+        </TabsContent>
+      </Tabs>
 
       <MerchantFormDialog open={editOpen} onOpenChange={setEditOpen} merchant={merchant} />
       <ConfirmDelete

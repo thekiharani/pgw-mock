@@ -6,6 +6,9 @@ CREATE TABLE users (
   email VARCHAR(256) NOT NULL,
   email_verified BOOLEAN NOT NULL DEFAULT FALSE,
   image VARCHAR(1024) NULL,
+  -- Global platform role: 'user' (scoped to their own merchants) or 'admin'
+  -- (sees/manages every merchant). Per-merchant roles live in merchant_members.
+  role VARCHAR(32) NOT NULL DEFAULT 'user',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

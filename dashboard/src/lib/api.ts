@@ -1,4 +1,12 @@
+import type { AdminOverview, AdminUserDetail, AdminUserDto, PlatformRole } from '@shared/dto/admin';
 import type { Paginated } from '@shared/dto/common';
+import type {
+  InvitationDto,
+  InvitationPreview,
+  InviteInput,
+  MembersResponse,
+  MerchantRole,
+} from '@shared/dto/member';
 import type {
   MerchantCreateInput,
   MerchantDto,
@@ -81,4 +89,48 @@ export const api = {
     }),
   listTransactions: (params: TransactionListParams = {}) =>
     request<Paginated<TransactionDto>>(`/transactions${qs(params as QueryParams)}`),
+
+  getMembers: (merchantId: string) => request<MembersResponse>(`/merchants/${merchantId}/members`),
+  invite: (merchantId: string, body: InviteInput) =>
+    request<InvitationDto>(`/merchants/${merchantId}/invitations`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  revokeInvitation: (merchantId: string, invitationId: string) =>
+    request<{ success: boolean }>(`/merchants/${merchantId}/invitations/${invitationId}`, {
+      method: 'DELETE',
+    }),
+  updateMemberRole: (merchantId: string, userId: string, role: MerchantRole) =>
+    request<{ success: boolean }>(`/merchants/${merchantId}/members/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+  removeMember: (merchantId: string, userId: string) =>
+    request<{ success: boolean }>(`/merchants/${merchantId}/members/${userId}`, {
+      method: 'DELETE',
+    }),
+  getInvitation: (token: string) => request<InvitationPreview>(`/invitations/${token}`),
+  acceptInvitation: (token: string) =>
+    request<{ success: boolean; merchantId: string }>(`/invitations/${token}/accept`, {
+      method: 'POST',
+    }),
+
+  adminOverview: () => request<AdminOverview>('/admin/overview'),
+  adminListUsers: (params: { page?: number; pageSize?: number; q?: string } = {}) =>
+    request<Paginated<AdminUserDto>>(`/admin/users${qs(params as QueryParams)}`),
+  adminGetUser: (userId: string) => request<AdminUserDetail>(`/admin/users/${userId}`),
+  adminSetPlatformRole: (userId: string, role: PlatformRole) =>
+    request<{ success: boolean }>(`/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+  adminGrantAccess: (userId: string, merchantId: string, role: MerchantRole) =>
+    request<{ success: boolean }>(`/admin/users/${userId}/merchants/${merchantId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+  adminRevokeAccess: (userId: string, merchantId: string) =>
+    request<{ success: boolean }>(`/admin/users/${userId}/merchants/${merchantId}`, {
+      method: 'DELETE',
+    }),
 };
