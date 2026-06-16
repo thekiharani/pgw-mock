@@ -1,0 +1,157 @@
+name: CI
+
+# Quality gate + image publish. Quality checks and tests run on every PR and on
+# pushes to main/dev. The image build/publish job depends on them, so images are
+# only built and pushed (on main) when every check has passed.
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-checks:
+    name: API typecheck, lint & tests
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: admin_444888
+          POSTGRES_PASSWORD: pass_444888
+          POSTGRES_DB: pgw_mock_test
+        ports:
+          - 5452:5432
+        options: >-
+          --health-cmd "pg_isready -U admin_444888 -d pgw_mock_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://admin_444888:pass_444888@127.0.0.1:5452/pgw_mock_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dbmate
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/dbmate \
+            https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+          sudo chmod +x /usr/local/bin/dbmate
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: api/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: api/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: api
+
+      - name: Typecheck
+        run: pnpm typecheck
+        working-directory: api
+
+      - name: Lint
+        run: pnpm lint
+        working-directory: api
+
+      - name: Test
+        run: pnpm test
+        working-directory: api
+
+  dashboard-checks:
+    name: Dashboard typecheck & lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: dashboard/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: dashboard
+
+      - name: Typecheck
+        run: pnpm typecheck
+        working-directory: dashboard
+
+      - name: Lint
+        run: pnpm lint
+        working-directory: dashboard
+
+  publish:
+    name: Build & push images
+    # Only publish once every quality check and test has passed.
+    needs: [api-checks, dashboard-checks]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: pgw-mock
+            target: runtime
+          - image: pgw-mock-dbmate
+            target: migrator
+    steps:
+      - uses: actions/checkout@v6
+
+      - id: meta
+        name: Compute image tags
+        env:
+          IMAGE: ghcr.io/thekiharani/${{ matrix.image }}
+          BRANCH: ${{ github.ref_name }}
+          HEAD_SHA: ${{ github.sha }}
+          VERSION: 1.0.${{ github.run_number }}
+        run: |
+          short_sha="${HEAD_SHA:0:7}"
+          tags="${IMAGE}:${BRANCH}-latest,${IMAGE}:${BRANCH}-${VERSION},${IMAGE}:${BRANCH}-${short_sha}"
+          if [ "${BRANCH}" = "main" ]; then
+            tags="${tags},${IMAGE}:latest,${IMAGE}:${VERSION}"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          provenance: false
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
