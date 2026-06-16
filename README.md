@@ -150,6 +150,15 @@ Capability mismatches return the Daraja `400.002.02` envelope. Missing metadata 
 | 887000–887049 | PAYBILL      | c2b, b2c, b2b (integrated; first 10 are named demo merchants) |
 | 888000–888049 | SasaPay till | —                                                             |
 
+> **Production seeds only the essentials.** The seed is split across two
+> migrations: `…_seed.sql` (core — the platform admin + the 10 named sandbox
+> merchants `887000–887009`) always runs, and `…_seed_demo.sql` (the ~240 bulk
+> mock merchants + the `ops`/`viewer` demo users + demo memberships) is gated on
+> the Postgres `app.seed_demo` setting. The production migrate service sets
+> `PGOPTIONS=-c app.seed_demo=off` (see `compose.prod.yml`), so a fresh prod DB
+> gets **only** the admin and the 10 sandbox merchants. Locally it is unset, so
+> `pnpm db:up` seeds the full demo dataset as before.
+
 ## Database & migrations (dbmate)
 
 ```bash

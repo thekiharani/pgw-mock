@@ -10,6 +10,9 @@ services:
       - .env
     environment:
       DBMATE_MIGRATIONS_DIR: /db/migrations
+      # Skip the bulk demo dataset (mock merchants + ops/viewer users). The seed
+      # migration reads this GUC; only the 10 named sandbox merchants + admin seed.
+      PGOPTIONS: "-c app.seed_demo=off"
     cap_drop:
       - ALL
     security_opt:
