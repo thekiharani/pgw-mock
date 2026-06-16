@@ -1,12 +1,14 @@
 name: CI
 
-# Quality gate + image publish. Quality checks and tests run on every PR and on
-# pushes to main/dev. The image build/publish job depends on them, so images are
-# only built and pushed (on main) when every check has passed.
+# Quality gate + image publish. Quality checks and tests run on every PR (the
+# gate that satisfies branch protection) and on pushes to main. The image
+# build/publish job depends on them, so images are only built and pushed (on
+# main) when every check has passed. dev is validated by its PRs, not by a
+# redundant push run.
 on:
   pull_request:
   push:
-    branches: [main, dev]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
