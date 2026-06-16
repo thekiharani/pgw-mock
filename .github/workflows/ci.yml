@@ -1,10 +1,5 @@
 name: CI
 
-# Quality gate + image publish. Quality checks and tests run on every PR (the
-# gate that satisfies branch protection) and on pushes to main. The image
-# build/publish job depends on them, so images are only built and pushed (on
-# main) when every check has passed. dev is validated by its PRs, not by a
-# redundant push run.
 on:
   pull_request:
   push:
@@ -104,7 +99,6 @@ jobs:
 
   publish:
     name: Build & push images
-    # Only publish once every quality check and test has passed.
     needs: [api-checks, dashboard-checks]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
