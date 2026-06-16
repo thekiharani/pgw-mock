@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: migrator
-    image: ghcr.io/norialabs/pgw-mock-migrate:${IMAGE_TAG:-latest}
+    image: ghcr.io/thekiharani/pgw-mock-dbmate:${IMAGE_TAG:-latest}
     container_name: noria-pgw-mock-migrate
     restart: 'no'
     environment:
@@ -19,7 +19,7 @@ services:
     build:
       context: .
       target: runtime
-    image: ghcr.io/norialabs/pgw-mock:${IMAGE_TAG:-latest}
+    image: ghcr.io/thekiharani/pgw-mock:${IMAGE_TAG:-latest}
     container_name: noria-pgw-mock
     restart: unless-stopped
     depends_on:

@@ -8,11 +8,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Image namespace. Matches compose.yml (ghcr.io/norialabs/pgw-mock[-migrate]).
-  # Pushing to an org namespace needs a GHCR_TOKEN secret (PAT with
-  # write:packages + access to the org). To publish under the repo owner
-  # instead, set this to the owner login and the built-in token is enough.
-  NAMESPACE: norialabs
+  # Image namespace (repo owner). Matches compose.yml. Publishing under the
+  # repo owner means the built-in GITHUB_TOKEN can push — no PAT needed.
+  NAMESPACE: thekiharani
 
 jobs:
   publish:
@@ -27,7 +25,7 @@ jobs:
           - target: runtime
             image: pgw-mock
           - target: migrator
-            image: pgw-mock-migrate
+            image: pgw-mock-dbmate
     steps:
       - name: Checkout
         uses: actions/checkout@v4
