@@ -1,5 +1,6 @@
 node_modules
 dist
+coverage
 drizzle
 pnpm-lock.yaml
 db/migrations
