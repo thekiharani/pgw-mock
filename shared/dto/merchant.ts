@@ -1,4 +1,9 @@
-import type { MerchantRole } from './member.js';
+import type { MerchantRole } from "./member.js";
+
+// Whether the shortcode behaves as a buy-goods till or a paybill, and which
+// M-Pesa flows it is allowed to perform. Mirrors the API capability service.
+export type MerchantCapability = "c2b" | "b2c" | "b2b";
+export type ShortcodeKind = "TILL" | "PAYBILL";
 
 export interface MerchantDto {
   id: string;
@@ -15,6 +20,8 @@ export interface MerchantDto {
   sasapayClientSecret: string | null;
   mpesaBalance: string;
   sasapayBalance: string;
+  shortcodeKind: ShortcodeKind;
+  capabilities: MerchantCapability[];
   meta: Record<string, unknown> | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -32,10 +39,14 @@ export interface MerchantCreateInput {
   sasapayClientSecret?: string | null;
   mpesaBalance?: string;
   sasapayBalance?: string;
+  shortcodeKind?: ShortcodeKind;
+  capabilities?: MerchantCapability[];
   meta?: Record<string, unknown> | null;
 }
 
-export type MerchantUpdateInput = Partial<Omit<MerchantCreateInput, 'mpesaPaybillNumber' | 'sasapayTillNumber'>>;
+// Paybill and till are now editable; credentials still rotate via their own
+// endpoints rather than this patch.
+export type MerchantUpdateInput = Partial<MerchantCreateInput>;
 
 export interface RotatedMpesaCredentials {
   mpesaConsumerKey: string;

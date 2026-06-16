@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Loader2, Plus, Search, ShieldCheck } from 'lucide-react';
+import { Eye, Loader2, Pencil, Plus, Search, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import type { PlatformRole } from '@shared/dto/admin';
+import type { AdminUserDto } from '@shared/dto/admin';
 
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -18,13 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { RowActions } from '@/components/ui/row-actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -35,22 +29,40 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { UserFormSheet } from '@/features/admin/user-form-sheet';
 
 const PAGE_SIZE = 20;
 
 export function AdminUsersPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<AdminUserDto | null>(null);
+  const [deleting, setDeleting] = useState<AdminUserDto | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', page, query],
     queryFn: () => api.adminListUsers({ page, pageSize: PAGE_SIZE, q: query || undefined }),
   });
 
+  const remove = useMutation({
+    mutationFn: (id: string) => api.adminDeleteUser(id),
+    onSuccess: () => {
+      toast.success('User deleted');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setDeleting(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+
+  function openUser(id: string) {
+    navigate({ to: '/admin/users/$userId', params: { userId: id } });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,13 +108,14 @@ export function AdminUsersPage() {
               <TableHead>User</TableHead>
               <TableHead>Platform role</TableHead>
               <TableHead className="text-right">Merchants</TableHead>
+              <TableHead className="w-12 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading &&
               Array.from({ length: 6 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 3 }).map((__, j) => (
+                  {Array.from({ length: 4 }).map((__, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-24" />
                     </TableCell>
@@ -111,19 +124,13 @@ export function AdminUsersPage() {
               ))}
             {data?.data.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
                   No users found.
                 </TableCell>
               </TableRow>
             )}
             {data?.data.map((user) => (
-              <TableRow
-                key={user.id}
-                className="cursor-pointer"
-                onClick={() =>
-                  navigate({ to: '/admin/users/$userId', params: { userId: user.id } })
-                }
-              >
+              <TableRow key={user.id} className="cursor-pointer" onClick={() => openUser(user.id)}>
                 <TableCell>
                   <div className="flex items-center gap-2.5">
                     <Avatar className="size-8">
@@ -146,6 +153,21 @@ export function AdminUsersPage() {
                   )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{user.merchantCount}</TableCell>
+                <TableCell className="text-right">
+                  <RowActions
+                    actions={[
+                      { label: 'View user', icon: Eye, onSelect: () => openUser(user.id) },
+                      { label: 'Edit', icon: Pencil, onSelect: () => setEditing(user) },
+                      {
+                        label: 'Delete',
+                        icon: Trash2,
+                        destructive: true,
+                        separatorBefore: true,
+                        onSelect: () => setDeleting(user),
+                      },
+                    ]}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -176,89 +198,41 @@ export function AdminUsersPage() {
         </div>
       </div>
 
-      <CreateUserDialog
+      <UserFormSheet
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreated={(user) => {
-          setCreateOpen(false);
-          navigate({ to: '/admin/users/$userId', params: { userId: user.id } });
-        }}
+        onSaved={(user) => openUser(user.id)}
       />
-    </div>
-  );
-}
+      <UserFormSheet
+        open={editing !== null}
+        onOpenChange={(open) => !open && setEditing(null)}
+        user={editing ?? undefined}
+      />
 
-function CreateUserDialog({
-  open,
-  onOpenChange,
-  onCreated,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCreated: (user: { id: string }) => void;
-}) {
-  const queryClient = useQueryClient();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<PlatformRole>('user');
-
-  const create = useMutation({
-    mutationFn: () => api.adminCreateUser({ name: name.trim(), email: email.trim(), role }),
-    onSuccess: (user) => {
-      toast.success('User created');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      setName('');
-      setEmail('');
-      setRole('user');
-      onCreated(user);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const canSubmit = name.trim().length > 0 && email.trim().length > 0 && !create.isPending;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>New user</DialogTitle>
-          <DialogDescription>
-            Creates a console account. They sign in with an email one-time code — no password.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (canSubmit) create.mutate();
-          }}
-        >
-          <Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input
-            type="email"
-            placeholder="email@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Select value={role} onValueChange={(v) => setRole(v as PlatformRole)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="user">User</SelectItem>
-              <SelectItem value="admin">Platform admin</SelectItem>
-            </SelectContent>
-          </Select>
-
+      <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete user</DialogTitle>
+            <DialogDescription>
+              Permanently delete <span className="font-medium">{deleting?.email}</span>. This
+              removes their sessions and merchant memberships. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter>
-            <Button type="submit" disabled={!canSubmit}>
-              {create.isPending && <Loader2 className="size-4 animate-spin" />}
-              Create user
+            <Button variant="ghost" onClick={() => setDeleting(null)} disabled={remove.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleting && remove.mutate(deleting.id)}
+              disabled={remove.isPending}
+            >
+              {remove.isPending && <Loader2 className="size-4 animate-spin" />}
+              Delete user
             </Button>
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

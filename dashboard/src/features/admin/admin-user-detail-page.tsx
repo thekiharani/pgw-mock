@@ -13,7 +13,6 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import type { AdminUserDto } from '@shared/dto/admin';
 import type { MerchantRole } from '@shared/dto/member';
 
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
@@ -35,9 +34,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { ROLE_OPTIONS } from '@/lib/roles';
+import { UserFormSheet } from '@/features/admin/user-form-sheet';
 
 export function AdminUserDetailPage() {
   const { userId } = useParams({ strict: false }) as { userId: string };
@@ -240,15 +248,7 @@ export function AdminUserDetailPage() {
         }}
       />
 
-      <EditUserDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        user={user}
-        onSaved={() => {
-          setEditOpen(false);
-          invalidate();
-        }}
-      />
+      <UserFormSheet open={editOpen} onOpenChange={setEditOpen} user={user} onSaved={invalidate} />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="max-w-md">
@@ -278,73 +278,6 @@ export function AdminUserDetailPage() {
   );
 }
 
-function EditUserDialog({
-  open,
-  onOpenChange,
-  user,
-  onSaved,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  user: AdminUserDto;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
-
-  const save = useMutation({
-    mutationFn: () => api.adminUpdateUser(user.id, { name: name.trim(), email: email.trim() }),
-    onSuccess: () => {
-      toast.success('User updated');
-      onSaved();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  // Reset fields whenever a different user (or a fresh open) flows in.
-  function handleOpenChange(next: boolean) {
-    if (next) {
-      setName(user.name);
-      setEmail(user.email);
-    }
-    onOpenChange(next);
-  }
-
-  const canSubmit = name.trim().length > 0 && email.trim().length > 0 && !save.isPending;
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit user</DialogTitle>
-          <DialogDescription>Update this user’s name and email.</DialogDescription>
-        </DialogHeader>
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (canSubmit) save.mutate();
-          }}
-        >
-          <Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input
-            type="email"
-            placeholder="email@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <DialogFooter>
-            <Button type="submit" disabled={!canSubmit}>
-              {save.isPending && <Loader2 className="size-4 animate-spin" />}
-              Save changes
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function GrantAccessDialog({
   open,
   onOpenChange,
@@ -367,14 +300,14 @@ function GrantAccessDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Grant merchant access</DialogTitle>
-          <DialogDescription>Search a merchant, pick a role, and grant access.</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent size="lg" className="p-0">
+        <SheetHeader>
+          <SheetTitle>Grant merchant access</SheetTitle>
+          <SheetDescription>Search a merchant, pick a role, and grant access.</SheetDescription>
+        </SheetHeader>
 
-        <div className="flex flex-col gap-3">
+        <SheetBody className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -405,7 +338,7 @@ function GrantAccessDialog({
             </Select>
           </div>
 
-          <div className="max-h-64 overflow-y-auto rounded-lg border">
+          <div className="overflow-hidden rounded-lg border">
             {isFetching && (
               <p className="p-4 text-center text-sm text-muted-foreground">Searching…</p>
             )}
@@ -435,9 +368,9 @@ function GrantAccessDialog({
               })}
             </ul>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
   );
 }
 

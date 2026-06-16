@@ -1,12 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Building2, Plus, Search } from 'lucide-react';
+import { Building2, Eye, Loader2, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
+import type { MerchantDto } from '@shared/dto/merchant';
+
+import { CapabilityBadges } from '@/components/capability-badges';
 import { RoleBadge } from '@/components/role-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { RowActions } from '@/components/ui/row-actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -18,8 +31,9 @@ import {
 } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { usePlatformAdmin } from '@/lib/auth-client';
+import { ROLE_RANK as RANK } from '@/lib/roles';
 import { formatMoney } from '@/lib/utils';
-import { MerchantFormDialog } from '@/features/merchants/merchant-form-dialog';
+import { MerchantFormSheet } from '@/features/merchants/merchant-form-sheet';
 
 const PAGE_SIZE = 20;
 
@@ -30,6 +44,8 @@ export function MerchantsPage() {
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<MerchantDto | null>(null);
+  const [deleting, setDeleting] = useState<MerchantDto | null>(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['merchants', page, query],
@@ -37,7 +53,23 @@ export function MerchantsPage() {
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
-  const cols = isAdmin ? 5 : 6;
+  // Name, Paybill, Till, Capabilities, [role], M-Pesa, SasaPay, Actions.
+  const cols = isAdmin ? 7 : 8;
+
+  const queryClient = useQueryClient();
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteMerchant(id),
+    onSuccess: () => {
+      toast.success('Merchant deleted');
+      queryClient.invalidateQueries({ queryKey: ['merchants'] });
+      setDeleting(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openMerchant(id: string) {
+    navigate({ to: '/merchants/$merchantId', params: { merchantId: id } });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,9 +119,11 @@ export function MerchantsPage() {
               <TableHead>Name</TableHead>
               <TableHead>Paybill</TableHead>
               <TableHead>Till</TableHead>
+              <TableHead>Capabilities</TableHead>
               {!isAdmin && <TableHead>Your role</TableHead>}
               <TableHead className="text-right">M-Pesa</TableHead>
               <TableHead className="text-right">SasaPay</TableHead>
+              <TableHead className="w-12 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -136,37 +170,66 @@ export function MerchantsPage() {
               </TableRow>
             )}
 
-            {data?.data.map((merchant) => (
-              <TableRow
-                key={merchant.id}
-                className="cursor-pointer"
-                onClick={() =>
-                  navigate({ to: '/merchants/$merchantId', params: { merchantId: merchant.id } })
-                }
-              >
-                <TableCell className="font-medium">
-                  {merchant.name}
-                  {merchant.email && (
-                    <div className="text-xs text-muted-foreground">{merchant.email}</div>
+            {data?.data.map((merchant) => {
+              const rank = merchant.myRole ? RANK[merchant.myRole] : 0;
+              return (
+                <TableRow
+                  key={merchant.id}
+                  className="cursor-pointer"
+                  onClick={() => openMerchant(merchant.id)}
+                >
+                  <TableCell className="font-medium">
+                    {merchant.name}
+                    {merchant.email && (
+                      <div className="text-xs text-muted-foreground">{merchant.email}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{merchant.mpesaPaybillNumber}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{merchant.sasapayTillNumber}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <CapabilityBadges capabilities={merchant.capabilities} />
+                  </TableCell>
+                  {!isAdmin && (
+                    <TableCell>{merchant.myRole && <RoleBadge role={merchant.myRole} />}</TableCell>
                   )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{merchant.mpesaPaybillNumber}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{merchant.sasapayTillNumber}</Badge>
-                </TableCell>
-                {!isAdmin && (
-                  <TableCell>{merchant.myRole && <RoleBadge role={merchant.myRole} />}</TableCell>
-                )}
-                <TableCell className="text-right tabular-nums">
-                  {formatMoney(merchant.mpesaBalance)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatMoney(merchant.sasapayBalance)}
-                </TableCell>
-              </TableRow>
-            ))}
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(merchant.mpesaBalance)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(merchant.sasapayBalance)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <RowActions
+                      actions={[
+                        {
+                          label: 'View merchant',
+                          icon: Eye,
+                          onSelect: () => openMerchant(merchant.id),
+                        },
+                        {
+                          label: 'Edit',
+                          icon: Pencil,
+                          hidden: rank < RANK.admin,
+                          onSelect: () => setEditing(merchant),
+                        },
+                        {
+                          label: 'Delete',
+                          icon: Trash2,
+                          destructive: true,
+                          separatorBefore: true,
+                          hidden: rank < RANK.owner,
+                          onSelect: () => setDeleting(merchant),
+                        },
+                      ]}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -195,7 +258,37 @@ export function MerchantsPage() {
         </div>
       </div>
 
-      <MerchantFormDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <MerchantFormSheet open={createOpen} onOpenChange={setCreateOpen} />
+      <MerchantFormSheet
+        open={editing !== null}
+        onOpenChange={(open) => !open && setEditing(null)}
+        merchant={editing ?? undefined}
+      />
+
+      <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete merchant</DialogTitle>
+            <DialogDescription>
+              Soft-delete <span className="font-medium text-foreground">{deleting?.name}</span>? It
+              will no longer appear in the console.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleting(null)} disabled={remove.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleting && remove.mutate(deleting.id)}
+              disabled={remove.isPending}
+            >
+              {remove.isPending && <Loader2 className="size-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

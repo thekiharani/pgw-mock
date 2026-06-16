@@ -79,6 +79,41 @@
   --color-ring: var(--ring);
 }
 
+/* Slideover (Sheet) enter/exit. Radix waits for animationend before unmounting,
+   so keying off data-state animates both directions. */
+@keyframes sheet-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes sheet-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes sheet-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes sheet-out-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+[data-side='right'][data-state='open'] {
+  animation: sheet-in-right 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-side='right'][data-state='closed'] {
+  animation: sheet-out-right 0.2s ease-in;
+}
+[data-side='left'][data-state='open'] {
+  animation: sheet-in-left 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-side='left'][data-state='closed'] {
+  animation: sheet-out-left 0.2s ease-in;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

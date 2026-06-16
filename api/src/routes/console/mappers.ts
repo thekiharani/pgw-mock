@@ -2,6 +2,8 @@ import type { MerchantRole } from '@shared/dto/member.js';
 import type { MerchantDto } from '@shared/dto/merchant.js';
 import type { TransactionDto } from '@shared/dto/transaction.js';
 
+import { readCapabilities, readShortcodeKind } from '@/services/capabilities.js';
+
 import type { merchants, transactions } from '@/db/schema.js';
 
 type MerchantRow = typeof merchants.$inferSelect;
@@ -31,6 +33,8 @@ export function toMerchantDto(row: MerchantRow, myRole: MerchantRole | null = nu
     sasapayClientSecret: row.sasapayClientSecret,
     mpesaBalance: row.mpesaBalance,
     sasapayBalance: row.sasapayBalance,
+    shortcodeKind: readShortcodeKind(row.meta),
+    capabilities: readCapabilities(row.meta),
     meta: row.meta ?? null,
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt),

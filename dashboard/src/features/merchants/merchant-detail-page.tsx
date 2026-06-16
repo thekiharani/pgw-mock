@@ -33,8 +33,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { formatDateTime, formatMoney } from '@/lib/utils';
 import { ROLE_RANK as RANK } from '@/lib/roles';
+import { CapabilityBadges } from '@/components/capability-badges';
 import { CollaboratorsTab } from '@/features/merchants/collaborators-tab';
-import { MerchantFormDialog } from '@/features/merchants/merchant-form-dialog';
+import { MerchantFormSheet } from '@/features/merchants/merchant-form-sheet';
 
 export function MerchantDetailPage() {
   const { merchantId } = useParams({ strict: false }) as { merchantId: string };
@@ -149,6 +150,24 @@ export function MerchantDetailPage() {
           </div>
 
           <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Shortcode &amp; capabilities</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Shortcode type</span>
+                <Badge variant="secondary" className="w-fit">
+                  {merchant.shortcodeKind === 'TILL' ? 'Till / Buy Goods' : 'Paybill'}
+                </Badge>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Enabled flows</span>
+                <CapabilityBadges capabilities={merchant.capabilities} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="text-base">M-Pesa (Daraja) credentials</CardTitle>
               {canRotate && (
@@ -195,7 +214,7 @@ export function MerchantDetailPage() {
         </TabsContent>
       </Tabs>
 
-      <MerchantFormDialog open={editOpen} onOpenChange={setEditOpen} merchant={merchant} />
+      <MerchantFormSheet open={editOpen} onOpenChange={setEditOpen} merchant={merchant} />
       <ConfirmDelete
         open={deleteOpen}
         onOpenChange={setDeleteOpen}

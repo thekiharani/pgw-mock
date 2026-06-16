@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 
 import type { MerchantRole } from '@shared/dto/member.js';
 
@@ -97,20 +97,38 @@ export async function getMerchantById(exec: Executor, id: string): Promise<Merch
   return rows[0] ?? null;
 }
 
-export async function merchantExistsByPaybill(exec: Executor, paybill: string): Promise<boolean> {
+export async function merchantExistsByPaybill(
+  exec: Executor,
+  paybill: string,
+  excludeId?: string,
+): Promise<boolean> {
   const rows = await exec
     .select({ id: merchants.id })
     .from(merchants)
-    .where(eq(merchants.mpesaPaybillNumber, paybill))
+    .where(
+      and(
+        eq(merchants.mpesaPaybillNumber, paybill),
+        excludeId ? ne(merchants.id, excludeId) : undefined,
+      ),
+    )
     .limit(1);
   return rows.length > 0;
 }
 
-export async function merchantExistsByTill(exec: Executor, till: string): Promise<boolean> {
+export async function merchantExistsByTill(
+  exec: Executor,
+  till: string,
+  excludeId?: string,
+): Promise<boolean> {
   const rows = await exec
     .select({ id: merchants.id })
     .from(merchants)
-    .where(eq(merchants.sasapayTillNumber, till))
+    .where(
+      and(
+        eq(merchants.sasapayTillNumber, till),
+        excludeId ? ne(merchants.id, excludeId) : undefined,
+      ),
+    )
     .limit(1);
   return rows.length > 0;
 }

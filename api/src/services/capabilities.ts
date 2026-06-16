@@ -38,23 +38,47 @@ const STK_TX_TYPE_BY_KIND: Record<ShortcodeKind, Set<string>> = {
 };
 const C2B_COMMAND_BY_KIND = STK_TX_TYPE_BY_KIND;
 
-export function shortcodeKind(merchant: Record<string, any>): ShortcodeKind {
-  const meta = merchant.merchant_meta ?? {};
+// The merchant's `meta` JSON holds the M-Pesa capability config under
+// `meta.mpesa`. These readers operate on that raw meta object so both the
+// gateway lookups (which alias the column as `merchant_meta`) and the console
+// mapper (plain `meta`) share one source of truth.
+export function readShortcodeKind(meta: Record<string, any> | null | undefined): ShortcodeKind {
   const raw = meta?.mpesa?.kind ?? DEFAULT_KIND;
   if (!VALID_KINDS.has(raw)) return DEFAULT_KIND;
   return raw;
 }
 
-export function capabilitiesOf(merchant: Record<string, any>): Set<Capability> {
-  const meta = merchant.merchant_meta ?? {};
+export function readCapabilities(meta: Record<string, any> | null | undefined): Capability[] {
   const raw = meta?.mpesa?.capabilities;
   if (Array.isArray(raw)) {
     const filtered = raw.filter(
       (c: unknown): c is Capability => typeof c === 'string' && VALID_CAPABILITIES.has(c),
     );
-    if (filtered.length) return new Set(filtered);
+    if (filtered.length) return filtered;
   }
-  return new Set(DEFAULT_CAPABILITIES);
+  return [...DEFAULT_CAPABILITIES];
+}
+
+// Merge capability config into a merchant's existing meta without clobbering
+// sibling keys (e.g. registered c2b confirmation/validation URLs).
+export function writeMpesaMeta(
+  meta: Record<string, any> | null | undefined,
+  patch: { capabilities?: Capability[]; shortcodeKind?: ShortcodeKind },
+): Record<string, any> {
+  const base = meta && typeof meta === 'object' ? { ...meta } : {};
+  const mpesa = { ...(base.mpesa ?? {}) };
+  if (patch.capabilities !== undefined) mpesa.capabilities = patch.capabilities;
+  if (patch.shortcodeKind !== undefined) mpesa.kind = patch.shortcodeKind;
+  base.mpesa = mpesa;
+  return base;
+}
+
+export function shortcodeKind(merchant: Record<string, any>): ShortcodeKind {
+  return readShortcodeKind(merchant.merchant_meta);
+}
+
+export function capabilitiesOf(merchant: Record<string, any>): Set<Capability> {
+  return new Set(readCapabilities(merchant.merchant_meta));
 }
 
 function darajaError(

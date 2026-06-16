@@ -8,13 +8,14 @@ import type { InvitationDto, MemberDto, MerchantRole } from '@shared/dto/member'
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -295,51 +296,54 @@ function InviteDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Invite a collaborator</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent size="lg" className="p-0">
+        <SheetHeader>
+          <SheetTitle>Invite a collaborator</SheetTitle>
+          <SheetDescription>
             They’ll get an email link to join this merchant. New users can sign in with a one-time
             code.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          id="invite-form"
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={(e) => {
             e.preventDefault();
             invite.mutate();
           }}
         >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              required
-              autoFocus
-              placeholder="teammate@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as MerchantRole)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    <span className="font-medium">{o.label}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{o.hint}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
+          <SheetBody className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="invite-email">Email</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                required
+                autoFocus
+                placeholder="teammate@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Role</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as MerchantRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      <span className="font-medium">{o.label}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{o.hint}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </SheetBody>
+          <SheetFooter>
             <Button
               type="button"
               variant="ghost"
@@ -356,9 +360,9 @@ function InviteDialog({
               )}
               Send invite
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
