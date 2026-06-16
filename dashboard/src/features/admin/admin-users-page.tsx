@@ -1,12 +1,30 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, ShieldCheck } from 'lucide-react';
+import { Loader2, Plus, Search, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
+
+import type { PlatformRole } from '@shared/dto/admin';
 
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -25,6 +43,7 @@ export function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users', page, query],
@@ -35,11 +54,17 @@ export function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-        <p className="text-sm text-muted-foreground">
-          {data ? `${data.total} console users` : 'All console users'}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+          <p className="text-sm text-muted-foreground">
+            {data ? `${data.total} console users` : 'All console users'}
+          </p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="size-4" />
+          New user
+        </Button>
       </div>
 
       <form
@@ -150,6 +175,90 @@ export function AdminUsersPage() {
           </Button>
         </div>
       </div>
+
+      <CreateUserDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(user) => {
+          setCreateOpen(false);
+          navigate({ to: '/admin/users/$userId', params: { userId: user.id } });
+        }}
+      />
     </div>
+  );
+}
+
+function CreateUserDialog({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: (user: { id: string }) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<PlatformRole>('user');
+
+  const create = useMutation({
+    mutationFn: () => api.adminCreateUser({ name: name.trim(), email: email.trim(), role }),
+    onSuccess: (user) => {
+      toast.success('User created');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setName('');
+      setEmail('');
+      setRole('user');
+      onCreated(user);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const canSubmit = name.trim().length > 0 && email.trim().length > 0 && !create.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>New user</DialogTitle>
+          <DialogDescription>
+            Creates a console account. They sign in with an email one-time code — no password.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (canSubmit) create.mutate();
+          }}
+        >
+          <Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input
+            type="email"
+            placeholder="email@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Select value={role} onValueChange={(v) => setRole(v as PlatformRole)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">User</SelectItem>
+              <SelectItem value="admin">Platform admin</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <DialogFooter>
+            <Button type="submit" disabled={!canSubmit}>
+              {create.isPending && <Loader2 className="size-4 animate-spin" />}
+              Create user
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

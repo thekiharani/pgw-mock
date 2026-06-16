@@ -141,4 +141,134 @@ describe('platform admin API (/api/console/admin)', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it('creates, edits, signs in, then deletes a user', async () => {
+    const app = await getApp();
+    const email = 'admin-created@example.com';
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/console/admin/users',
+      headers: { cookie: adminCookie, 'content-type': 'application/json' },
+      payload: { name: 'Admin Created', email: email.toUpperCase(), role: 'user' },
+    });
+    expect(created.statusCode).toBe(201);
+    const userId = created.json().id as string;
+    expect(created.json().email).toBe(email); // normalized to lowercase
+
+    // A directly-created user can sign in via email-OTP (email_verified preset).
+    const cookie = await signInAndGetCookie(app, email);
+    expect(cookie).toMatch(/=/);
+
+    const edit = await app.inject({
+      method: 'PATCH',
+      url: `/api/console/admin/users/${userId}`,
+      headers: { cookie: adminCookie, 'content-type': 'application/json' },
+      payload: { name: 'Renamed', email: 'admin-created-2@example.com' },
+    });
+    expect(edit.statusCode).toBe(200);
+
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/console/admin/users/${userId}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(detail.json().user.name).toBe('Renamed');
+    expect(detail.json().user.email).toBe('admin-created-2@example.com');
+
+    const del = await app.inject({
+      method: 'DELETE',
+      url: `/api/console/admin/users/${userId}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(del.statusCode).toBe(200);
+
+    const gone = await app.inject({
+      method: 'GET',
+      url: `/api/console/admin/users/${userId}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(gone.statusCode).toBe(404);
+  });
+
+  it('rejects creating a user with a duplicate email', async () => {
+    const app = await getApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/console/admin/users',
+      headers: { cookie: adminCookie, 'content-type': 'application/json' },
+      payload: { name: 'Dupe', email: 'admin@noria.co.ke', role: 'user' },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('blocks deleting the only owner of a merchant', async () => {
+    const app = await getApp();
+    // Make a fresh user the sole owner of a merchant, then try to delete them.
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/console/admin/users',
+      headers: { cookie: adminCookie, 'content-type': 'application/json' },
+      payload: { name: 'Sole Owner', email: 'sole-owner@example.com', role: 'user' },
+    });
+    const userId = created.json().id as string;
+    const merchants = await app.inject({
+      method: 'GET',
+      url: '/api/console/merchants?pageSize=1',
+      headers: { cookie: adminCookie },
+    });
+    const merchantId = merchants.json().data[0].id as string;
+    await app.inject({
+      method: 'PUT',
+      url: `/api/console/admin/users/${userId}/merchants/${merchantId}`,
+      headers: { cookie: adminCookie, 'content-type': 'application/json' },
+      payload: { role: 'owner' },
+    });
+
+    const blocked = await app.inject({
+      method: 'DELETE',
+      url: `/api/console/admin/users/${userId}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(blocked.statusCode).toBe(409);
+
+    // Add a second owner so the user is no longer the only one, then the delete
+    // is allowed (also keeps reruns idempotent — the test user is removed).
+    const admins = await app.inject({
+      method: 'GET',
+      url: `/api/console/admin/users?q=${encodeURIComponent('admin@noria.co.ke')}`,
+      headers: { cookie: adminCookie },
+    });
+    const adminId = admins
+      .json()
+      .data.find((u: { email: string }) => u.email === 'admin@noria.co.ke').id as string;
+    await app.inject({
+      method: 'PUT',
+      url: `/api/console/admin/users/${adminId}/merchants/${merchantId}`,
+      headers: { cookie: adminCookie, 'content-type': 'application/json' },
+      payload: { role: 'owner' },
+    });
+    const ok = await app.inject({
+      method: 'DELETE',
+      url: `/api/console/admin/users/${userId}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(ok.statusCode).toBe(200);
+  });
+
+  it('prevents an admin from deleting their own account', async () => {
+    const app = await getApp();
+    const list = await app.inject({
+      method: 'GET',
+      url: `/api/console/admin/users?q=${encodeURIComponent('admin@noria.co.ke')}`,
+      headers: { cookie: adminCookie },
+    });
+    const self = list.json().data.find((u: { email: string }) => u.email === 'admin@noria.co.ke');
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/console/admin/users/${self.id}`,
+      headers: { cookie: adminCookie },
+    });
+    expect(res.statusCode).toBe(400);
+  });
 });

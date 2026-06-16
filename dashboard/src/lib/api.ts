@@ -1,4 +1,11 @@
-import type { AdminOverview, AdminUserDetail, AdminUserDto, PlatformRole } from '@shared/dto/admin';
+import type {
+  AdminOverview,
+  AdminUserDetail,
+  AdminUserDto,
+  CreateUserInput,
+  PlatformRole,
+  UpdateUserInput,
+} from '@shared/dto/admin';
 import type { Paginated } from '@shared/dto/common';
 import type {
   InvitationDto,
@@ -119,11 +126,20 @@ export const api = {
   adminListUsers: (params: { page?: number; pageSize?: number; q?: string } = {}) =>
     request<Paginated<AdminUserDto>>(`/admin/users${qs(params as QueryParams)}`),
   adminGetUser: (userId: string) => request<AdminUserDetail>(`/admin/users/${userId}`),
+  adminCreateUser: (body: CreateUserInput) =>
+    request<AdminUserDto>('/admin/users', { method: 'POST', body: JSON.stringify(body) }),
+  adminUpdateUser: (userId: string, body: UpdateUserInput) =>
+    request<{ success: boolean }>(`/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
   adminSetPlatformRole: (userId: string, role: PlatformRole) =>
     request<{ success: boolean }>(`/admin/users/${userId}`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
     }),
+  adminDeleteUser: (userId: string) =>
+    request<{ success: boolean }>(`/admin/users/${userId}`, { method: 'DELETE' }),
   adminGrantAccess: (userId: string, merchantId: string, role: MerchantRole) =>
     request<{ success: boolean }>(`/admin/users/${userId}/merchants/${merchantId}`, {
       method: 'PUT',

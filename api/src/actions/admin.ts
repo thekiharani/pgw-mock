@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 
 import type { PlatformRole } from '@shared/dto/admin.js';
 import type { MerchantRole } from '@shared/dto/member.js';
@@ -171,6 +171,80 @@ export async function setPlatformRole(
 ): Promise<number> {
   const result = await exec.update(users).set({ role }).where(eq(users.id, userId));
   return affectedRows(result);
+}
+
+// True if any user already has this email — optionally ignoring one id (used so
+// an update can keep the user's own address).
+export async function emailExists(
+  exec: Executor,
+  email: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const conditions: SQL[] = [eq(users.email, email)];
+  if (exceptId) conditions.push(ne(users.id, exceptId));
+  const rows = await exec
+    .select({ id: users.id })
+    .from(users)
+    .where(and(...conditions))
+    .limit(1);
+  return rows.length > 0;
+}
+
+// Create a console user directly. email_verified is preset so the email-OTP
+// step is the only thing standing between them and sign-in (no password exists).
+export async function createUser(
+  exec: Executor,
+  values: { id: string; name: string; email: string; role: PlatformRole },
+): Promise<void> {
+  const now = new Date();
+  await exec.insert(users).values({
+    id: values.id,
+    name: values.name,
+    email: values.email,
+    emailVerified: true,
+    role: values.role,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function updateUser(
+  exec: Executor,
+  id: string,
+  patch: { name?: string; email?: string; role?: PlatformRole },
+): Promise<number> {
+  const set: Partial<typeof users.$inferInsert> = {};
+  if (patch.name !== undefined) set.name = patch.name;
+  if (patch.email !== undefined) set.email = patch.email;
+  if (patch.role !== undefined) set.role = patch.role;
+  if (Object.keys(set).length === 0) return 0;
+  const result = await exec.update(users).set(set).where(eq(users.id, id));
+  return affectedRows(result);
+}
+
+// Deleting a user cascades to their sessions, accounts, and merchant memberships
+// (FK ON DELETE CASCADE); invitations they sent are set null.
+export async function deleteUser(exec: Executor, id: string): Promise<number> {
+  const result = await exec.delete(users).where(eq(users.id, id));
+  return affectedRows(result);
+}
+
+// Names of live merchants this user is the *only* owner of — deleting the user
+// (or stripping their ownership) would leave these merchants ownerless.
+export async function merchantsSolelyOwnedBy(exec: Executor, userId: string): Promise<string[]> {
+  const rows = await exec
+    .select({ name: merchants.name })
+    .from(merchantMembers)
+    .innerJoin(merchants, eq(merchants.id, merchantMembers.merchantId))
+    .where(
+      and(
+        eq(merchantMembers.userId, userId),
+        eq(merchantMembers.role, 'owner'),
+        isNull(merchants.deletedAt),
+        sql`(select count(*) from ${merchantMembers} om where om.merchant_id = ${merchantMembers.merchantId} and om.role = 'owner') <= 1`,
+      ),
+    );
+  return rows.map((r) => r.name);
 }
 
 // Grant or change a user's membership on a merchant (admin override).

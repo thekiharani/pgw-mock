@@ -1,21 +1,20 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
-import type {
-  AdminOverview,
-  AdminUserDetail,
-  AdminUserDto,
-  PlatformRole,
-} from '@shared/dto/admin.js';
+import type { AdminOverview, AdminUserDetail, AdminUserDto } from '@shared/dto/admin.js';
 
 import {
+  createUser,
+  deleteUser,
+  emailExists,
   getOverviewCounts,
   getUserById,
   grantMembership,
   listRecentTransactions,
   listUserMemberships,
   listUsers,
-  setPlatformRole,
+  merchantsSolelyOwnedBy,
+  updateUser,
   type AdminUserRow,
 } from '@/actions/admin.js';
 import { countOwners, removeMember } from '@/actions/console.js';
@@ -33,10 +32,26 @@ const ListQuery = z.object({
 
 const UserParam = z.object({ userId: z.string().trim().min(1).max(36) });
 const AccessParam = UserParam.extend({ merchantId: z.string().trim().min(1).max(36) });
-const PlatformRoleBody = z.object({ role: z.enum(['user', 'admin']) }).strict();
+const PlatformRole = z.enum(['user', 'admin']);
 const MerchantRoleBody = z
   .object({ role: z.enum(['owner', 'admin', 'member', 'viewer']) })
   .strict();
+
+const NameField = z.string().trim().min(1).max(256);
+const EmailField = z.string().trim().email().max(256);
+const CreateUserBody = z
+  .object({ name: NameField, email: EmailField, role: PlatformRole.default('user') })
+  .strict();
+const UpdateUserBody = z
+  .object({
+    name: NameField.optional(),
+    email: EmailField.optional(),
+    role: PlatformRole.optional(),
+  })
+  .strict()
+  .refine((b) => b.name !== undefined || b.email !== undefined || b.role !== undefined, {
+    message: 'Provide at least one field to update',
+  });
 
 function toAdminUserDto(row: AdminUserRow): AdminUserDto {
   return {
@@ -83,6 +98,23 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.post(
+    '/admin/users',
+    { schema: { body: CreateUserBody, tags: ['Console'] } },
+    async (request, reply) => {
+      const body = request.body as z.infer<typeof CreateUserBody>;
+      const email = body.email.toLowerCase();
+      if (await emailExists(db, email)) {
+        throw new AppError({ statusCode: 409, message: 'A user with that email already exists' });
+      }
+      const id = uuid7();
+      await createUser(db, { id, name: body.name, email, role: body.role });
+      const user = await getUserById(db, id);
+      reply.code(201);
+      return toAdminUserDto(user!);
+    },
+  );
+
   app.get(
     '/admin/users/:userId',
     { schema: { params: UserParam, tags: ['Console'] } },
@@ -98,15 +130,46 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
   app.patch(
     '/admin/users/:userId',
-    { schema: { params: UserParam, body: PlatformRoleBody, tags: ['Console'] } },
+    { schema: { params: UserParam, body: UpdateUserBody, tags: ['Console'] } },
     async (request) => {
       const { userId } = request.params as z.infer<typeof UserParam>;
-      const { role } = request.body as z.infer<typeof PlatformRoleBody>;
+      const body = request.body as z.infer<typeof UpdateUserBody>;
       // Guard against locking yourself out of platform admin.
-      if (userId === request.authSession!.user.id && role !== 'admin') {
+      if (
+        body.role !== undefined &&
+        userId === request.authSession!.user.id &&
+        body.role !== 'admin'
+      ) {
         throw new AppError({ statusCode: 400, message: 'You cannot remove your own admin role' });
       }
-      const affected = await setPlatformRole(db, userId, role as PlatformRole);
+      const existing = await getUserById(db, userId);
+      if (!existing) throw new AppError({ statusCode: 404, message: 'User not found' });
+
+      const email = body.email?.toLowerCase();
+      if (email && (await emailExists(db, email, userId))) {
+        throw new AppError({ statusCode: 409, message: 'A user with that email already exists' });
+      }
+      await updateUser(db, userId, { name: body.name, email, role: body.role });
+      return { success: true };
+    },
+  );
+
+  app.delete(
+    '/admin/users/:userId',
+    { schema: { params: UserParam, tags: ['Console'] } },
+    async (request) => {
+      const { userId } = request.params as z.infer<typeof UserParam>;
+      if (userId === request.authSession!.user.id) {
+        throw new AppError({ statusCode: 400, message: 'You cannot delete your own account' });
+      }
+      const orphaned = await merchantsSolelyOwnedBy(db, userId);
+      if (orphaned.length > 0) {
+        throw new AppError({
+          statusCode: 409,
+          message: `This user is the only owner of: ${orphaned.join(', ')}. Reassign ownership before deleting.`,
+        });
+      }
+      const affected = await deleteUser(db, userId);
       if (!affected) throw new AppError({ statusCode: 404, message: 'User not found' });
       return { success: true };
     },

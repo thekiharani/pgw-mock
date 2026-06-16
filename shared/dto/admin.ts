@@ -38,3 +38,15 @@ export interface AdminUserDetail {
   user: AdminUserDto;
   memberships: AdminUserMembership[];
 }
+
+export interface CreateUserInput {
+  name: string;
+  email: string;
+  role: PlatformRole;
+}
+
+export interface UpdateUserInput {
+  name?: string;
+  email?: string;
+  role?: PlatformRole;
+}

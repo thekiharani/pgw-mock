@@ -1,3 +1,5 @@
+name: pgw_mock
+
 services:
   migrate:
     build:
@@ -5,9 +7,9 @@ services:
       target: migrator
     image: ghcr.io/thekiharani/pgw-mock-dbmate:${IMAGE_TAG:-latest}
     container_name: noria-pgw-mock-migrate
-    restart: 'no'
+    restart: "no"
     environment:
-      DATABASE_URL: 'postgresql://${DB_USER:-admin_444888}:${DB_PASSWORD:-pass_444888}@noria_postgres:5432/${DB_NAME:-pgw_mock}?sslmode=disable'
+      DATABASE_URL: "postgresql://${DB_USER:-admin_444888}:${DB_PASSWORD:-pass_444888}@noria_postgres:5432/${DB_NAME:-pgw_mock}?sslmode=disable"
     cap_drop:
       - ALL
     security_opt:
@@ -15,7 +17,7 @@ services:
     networks:
       - norialabs
 
-  pgw-mock:
+  app:
     build:
       context: .
       target: runtime
@@ -36,7 +38,7 @@ services:
       STRICT_PROVIDER_AUTH: ${STRICT_PROVIDER_AUTH:-true}
       STRICT_PROVIDER_VALIDATION: ${STRICT_PROVIDER_VALIDATION:-true}
       RELAXED_WAAS_KYC: ${RELAXED_WAAS_KYC:-false}
-      SERVE_DASHBOARD: 'true'
+      SERVE_DASHBOARD: "true"
       DASHBOARD_DIST: /app/public
       AUTH_SECRET: ${AUTH_SECRET:-change-me-in-prod}
       AUTH_BASE_URL: ${AUTH_BASE_URL:-http://localhost:4300}
@@ -48,14 +50,14 @@ services:
       MAIL_DRIVER: ${MAIL_DRIVER:-console}
       MAIL_FROM: ${MAIL_FROM:-Noria Payments Mock <no-reply@noria.local>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      DATABASE_URL: ''
+      DATABASE_URL: ""
       DB_HOST: noria_postgres
-      DB_PORT: '5432'
+      DB_PORT: "5432"
       DB_USER: ${DB_USER:-admin_444888}
       DB_PASSWORD: ${DB_PASSWORD:-pass_444888}
       DB_NAME: ${DB_NAME:-pgw_mock}
     ports:
-      - '${HOST_PORT:-4300}:4200'
+      - "${HOST_PORT:-4300}:4200"
     read_only: true
     tmpfs:
       - /tmp
@@ -68,15 +70,15 @@ services:
       resources:
         limits:
           memory: 512M
-          cpus: '1.0'
+          cpus: "1.0"
         reservations:
           memory: 128M
-          cpus: '0.25'
+          cpus: "0.25"
     logging:
       driver: json-file
       options:
-        max-size: '10m'
-        max-file: '3'
+        max-size: "10m"
+        max-file: "3"
     networks:
       - norialabs
 

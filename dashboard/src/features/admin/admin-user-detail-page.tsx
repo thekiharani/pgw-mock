@@ -1,9 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from '@tanstack/react-router';
-import { ArrowLeft, Loader2, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import {
+  ArrowLeft,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import type { AdminUserDto } from '@shared/dto/admin';
 import type { MerchantRole } from '@shared/dto/member';
 
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
@@ -13,6 +23,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -30,8 +41,11 @@ import { ROLE_OPTIONS } from '@/lib/roles';
 
 export function AdminUserDetailPage() {
   const { userId } = useParams({ strict: false }) as { userId: string };
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [grantOpen, setGrantOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin', 'user', userId],
@@ -67,6 +81,16 @@ export function AdminUserDetailPage() {
     onSuccess: () => {
       toast.success('Access revoked');
       invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeUser = useMutation({
+    mutationFn: () => api.adminDeleteUser(userId),
+    onSuccess: () => {
+      toast.success('User deleted');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      navigate({ to: '/admin/users' });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -116,20 +140,30 @@ export function AdminUserDetailPage() {
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
         </div>
-        <Button
-          variant={isAdminRole ? 'outline' : 'default'}
-          onClick={() => setRole.mutate(isAdminRole ? 'user' : 'admin')}
-          disabled={setRole.isPending}
-        >
-          {setRole.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : isAdminRole ? (
-            <ShieldOff className="size-4" />
-          ) : (
-            <ShieldCheck className="size-4" />
-          )}
-          {isAdminRole ? 'Revoke platform admin' : 'Make platform admin'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setEditOpen(true)}>
+            <Pencil className="size-4" />
+            Edit
+          </Button>
+          <Button
+            variant={isAdminRole ? 'outline' : 'default'}
+            onClick={() => setRole.mutate(isAdminRole ? 'user' : 'admin')}
+            disabled={setRole.isPending}
+          >
+            {setRole.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : isAdminRole ? (
+              <ShieldOff className="size-4" />
+            ) : (
+              <ShieldCheck className="size-4" />
+            )}
+            {isAdminRole ? 'Revoke platform admin' : 'Make platform admin'}
+          </Button>
+          <Button variant="outline" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="size-4 text-destructive" />
+            Delete
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -205,7 +239,109 @@ export function AdminUserDetailPage() {
           setGrantOpen(false);
         }}
       />
+
+      <EditUserDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        user={user}
+        onSaved={() => {
+          setEditOpen(false);
+          invalidate();
+        }}
+      />
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete user</DialogTitle>
+            <DialogDescription>
+              Permanently delete <span className="font-medium">{user.email}</span>. This removes
+              their sessions and merchant memberships. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => removeUser.mutate()}
+              disabled={removeUser.isPending}
+            >
+              {removeUser.isPending && <Loader2 className="size-4 animate-spin" />}
+              Delete user
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function EditUserDialog({
+  open,
+  onOpenChange,
+  user,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: AdminUserDto;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
+
+  const save = useMutation({
+    mutationFn: () => api.adminUpdateUser(user.id, { name: name.trim(), email: email.trim() }),
+    onSuccess: () => {
+      toast.success('User updated');
+      onSaved();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Reset fields whenever a different user (or a fresh open) flows in.
+  function handleOpenChange(next: boolean) {
+    if (next) {
+      setName(user.name);
+      setEmail(user.email);
+    }
+    onOpenChange(next);
+  }
+
+  const canSubmit = name.trim().length > 0 && email.trim().length > 0 && !save.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit user</DialogTitle>
+          <DialogDescription>Update this user’s name and email.</DialogDescription>
+        </DialogHeader>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (canSubmit) save.mutate();
+          }}
+        >
+          <Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input
+            type="email"
+            placeholder="email@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <DialogFooter>
+            <Button type="submit" disabled={!canSubmit}>
+              {save.isPending && <Loader2 className="size-4 animate-spin" />}
+              Save changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
