@@ -101,7 +101,12 @@ function UserForm({
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="user-name">Full name</Label>
-            <Input id="user-name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              id="user-name"
+              placeholder="Jane Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="user-email">Email</Label>

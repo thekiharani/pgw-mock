@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { formatDateTime, formatMoney } from '@/lib/utils';
 
 const PAGE_SIZE = 25;
@@ -31,7 +32,13 @@ function statusVariant(status: string): 'success' | 'warning' | 'destructive' | 
 export function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState({ q: '', gateway: '', status: '' });
-  const [filters, setFilters] = useState({ q: '', gateway: '', status: '' });
+  const filters = useDebouncedValue(draft, 300);
+
+  // A changed filter starts from the first page of results.
+  function setFilter(patch: Partial<typeof draft>) {
+    setDraft((d) => ({ ...d, ...patch }));
+    setPage(1);
+  }
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['transactions', page, filters],
@@ -56,36 +63,26 @@ export function TransactionsPage() {
         </p>
       </div>
 
-      <form
-        className="flex flex-wrap items-center gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPage(1);
-          setFilters({ ...draft });
-        }}
-      >
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           className="w-56"
           placeholder="Code or reference…"
           value={draft.q}
-          onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
+          onChange={(e) => setFilter({ q: e.target.value })}
         />
         <Input
           className="w-36"
           placeholder="Gateway"
           value={draft.gateway}
-          onChange={(e) => setDraft((d) => ({ ...d, gateway: e.target.value }))}
+          onChange={(e) => setFilter({ gateway: e.target.value })}
         />
         <Input
           className="w-36"
           placeholder="Status"
           value={draft.status}
-          onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}
+          onChange={(e) => setFilter({ status: e.target.value })}
         />
-        <Button type="submit" variant="secondary">
-          Filter
-        </Button>
-      </form>
+      </div>
 
       <div className="rounded-xl border">
         <Table>

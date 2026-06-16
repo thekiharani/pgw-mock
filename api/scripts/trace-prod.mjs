@@ -19,7 +19,9 @@ const FORCE_INCLUDE = ['pg', '@scalar/fastify-api-reference', '@fastify/static']
 
 await rm(OUT, { recursive: true, force: true });
 
-const { fileList, warnings } = await nodeFileTrace(['dist/index.js'], { base: cwd });
+const { fileList, warnings } = await nodeFileTrace(['dist/index.js', 'dist/create-user.js'], {
+  base: cwd,
+});
 
 let files = 0;
 let links = 0;

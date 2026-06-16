@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/table';
 import { api } from '@/lib/api';
 import { usePlatformAdmin } from '@/lib/auth-client';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { ROLE_RANK as RANK } from '@/lib/roles';
 import { formatMoney } from '@/lib/utils';
 import { MerchantFormSheet } from '@/features/merchants/merchant-form-sheet';
@@ -42,7 +43,7 @@ export function MerchantsPage() {
   const isAdmin = usePlatformAdmin();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
+  const query = useDebouncedValue(search.trim(), 300);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<MerchantDto | null>(null);
   const [deleting, setDeleting] = useState<MerchantDto | null>(null);
@@ -90,35 +91,26 @@ export function MerchantsPage() {
         </Button>
       </div>
 
-      <form
-        className="flex max-w-sm items-center gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPage(1);
-          setQuery(search.trim());
-        }}
-      >
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Search name, email, paybill, till…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Button type="submit" variant="secondary">
-          Search
-        </Button>
-      </form>
+      <div className="relative max-w-sm">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-8"
+          placeholder="Search name, email, paybill, till…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+      </div>
 
       <div className="rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Paybill</TableHead>
-              <TableHead>Till</TableHead>
+              <TableHead>M-Pesa Paybill</TableHead>
+              <TableHead>SasaPay Till</TableHead>
               <TableHead>Capabilities</TableHead>
               {!isAdmin && <TableHead>Your role</TableHead>}
               <TableHead className="text-right">M-Pesa</TableHead>

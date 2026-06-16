@@ -29,6 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { UserFormSheet } from '@/features/admin/user-form-sheet';
 
 const PAGE_SIZE = 20;
@@ -38,7 +39,7 @@ export function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
+  const query = useDebouncedValue(search.trim(), 300);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUserDto | null>(null);
   const [deleting, setDeleting] = useState<AdminUserDto | null>(null);
@@ -79,27 +80,18 @@ export function AdminUsersPage() {
         </Button>
       </div>
 
-      <form
-        className="flex max-w-sm items-center gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPage(1);
-          setQuery(search.trim());
-        }}
-      >
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Search name or email…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Button type="submit" variant="secondary">
-          Search
-        </Button>
-      </form>
+      <div className="relative max-w-sm">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-8"
+          placeholder="Search name or email…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+      </div>
 
       <div className="rounded-xl border">
         <Table>

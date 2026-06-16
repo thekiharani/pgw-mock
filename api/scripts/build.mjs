@@ -4,8 +4,14 @@ import { build } from 'esbuild';
 rmSync(new URL('../dist', import.meta.url), { recursive: true, force: true });
 
 await build({
-  entryPoints: ['src/index.ts'],
-  outfile: 'dist/index.js',
+  // The server plus standalone maintenance scripts. `out` pins each output name
+  // so they land flat in dist/ (dist/index.js, dist/create-user.js) regardless of
+  // their source directory.
+  entryPoints: [
+    { in: 'src/index.ts', out: 'index' },
+    { in: 'scripts/create-user.ts', out: 'create-user' },
+  ],
+  outdir: 'dist',
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -17,4 +23,4 @@ await build({
   logLevel: 'info',
 });
 
-console.log('Built dist/index.js (single-file ESM, minified, no source maps).');
+console.log('Built dist/index.js + dist/create-user.js (ESM, minified, no source maps).');

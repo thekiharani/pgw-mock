@@ -1,6 +1,16 @@
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
-import { Building2, LayoutDashboard, LogOut, Receipt, ShieldCheck, Users } from 'lucide-react';
+import {
+  Building2,
+  LayoutDashboard,
+  LogOut,
+  Receipt,
+  Search,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
+import { useState } from 'react';
 
+import { CommandPalette } from '@/components/command-palette';
 import { Avatar, AvatarFallback, AvatarImage, initials } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { signOut, usePlatformAdmin, useSession } from '@/lib/auth-client';
@@ -19,9 +29,16 @@ export function AppShell() {
   const { data } = useSession();
   const isAdmin = usePlatformAdmin();
   const navigate = useNavigate();
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [cmdkInput, setCmdkInput] = useState('');
 
   const user = data?.user;
   const displayName = user?.name || user?.email || 'Signed in';
+
+  function handleCmdkOpenChange(open: boolean) {
+    setCmdkOpen(open);
+    if (!open) setCmdkInput('');
+  }
 
   async function handleSignOut() {
     await signOut();
@@ -40,6 +57,17 @@ export function AppShell() {
             <div className="text-xs text-muted-foreground">Mock Console</div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setCmdkOpen(true)}
+          className="mb-4 flex w-full items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Search className="size-4" />
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="pointer-events-none rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium">
+            ⌘K
+          </kbd>
+        </button>
         <nav className="flex flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
@@ -115,6 +143,13 @@ export function AppShell() {
           <Outlet />
         </div>
       </main>
+
+      <CommandPalette
+        open={cmdkOpen}
+        onOpenChange={handleCmdkOpenChange}
+        input={cmdkInput}
+        onInputChange={setCmdkInput}
+      />
     </div>
   );
 }

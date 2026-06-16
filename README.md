@@ -66,6 +66,25 @@ is a **resource** owned by the user who created it; sign-in is email-OTP only.
 Seeded console users: `admin@noria.co.ke` (platform admin), `ops@noria.co.ke`
 (owns/co-admins a few merchants), `viewer@noria.co.ke` (viewer on one).
 
+#### Creating users from the CLI
+
+`pnpm --dir api user:create` adds a console user directly (the same path the
+**Users → New user** button uses). `role` defaults to `admin` and may be `admin`
+or `user`; sign-in is email-OTP, so there is no password to set. Details come from
+interactive prompts, a `--json` string, a `--file`, or piped stdin (one object or
+an array):
+
+```bash
+pnpm --dir api user:create                                              # prompts
+pnpm --dir api user:create --json '{"name":"Jane Doe","email":"jane@noria.co.ke"}'
+pnpm --dir api user:create --file ./new-admin.json
+echo '[{"name":"A","email":"a@noria.co.ke"},{"name":"B","email":"b@noria.co.ke","role":"user"}]' \
+  | pnpm --dir api user:create
+```
+
+An existing email is skipped, not duplicated. It writes to the DB named in
+`api/.env`. To run it inside the Docker container, see [Docker](#docker).
+
 ## Stack
 
 - Node 24 · TypeScript (ESM) · pnpm
@@ -196,7 +215,7 @@ Scenario resolution priority: persisted DB scenario → `X-Mock-Result-Code` req
 
 ```bash
 pnpm dev       # tsx watch
-pnpm build     # esbuild -> single-file ESM dist/index.js (no source maps)
+pnpm build     # esbuild -> ESM dist/index.js + dist/create-user.js (no source maps)
 pnpm typecheck # tsc --noEmit (src + tests)
 pnpm start     # node dist/index.js
 pnpm test     # Vitest (requires a PostgreSQL test DB; see vitest.config.ts)
@@ -233,6 +252,27 @@ so the BetterAuth session cookie is same-origin.
 
 From the host (e.g. `pnpm dev`, `pnpm db:up`) reach the same PostgreSQL via its
 published port — `127.0.0.1:5452` — as configured in `.env`.
+
+### Maintenance scripts in the container
+
+The image bundles `dist/create-user.js` (see
+[Creating users from the CLI](#creating-users-from-the-cli)). The runtime is
+distroless — no shell, no `pnpm`/`tsx` — so invoke `node` directly inside the
+running app container, which already has the right DB env:
+
+```bash
+docker compose exec app /nodejs/bin/node /app/dist/create-user.js \
+  --json '{"name":"Jane Doe","email":"jane@noria.co.ke"}'
+
+docker compose exec app /nodejs/bin/node /app/dist/create-user.js   # interactive prompts
+
+echo '{"name":"Jane","email":"jane@noria.co.ke"}' \
+  | docker compose exec -T app /nodejs/bin/node /app/dist/create-user.js   # -T pipes stdin
+```
+
+`--file` needs a path that exists in the container; there is no shell to create
+one, so prefer `--json`/stdin, or `docker cp ./new-admin.json <container>:/tmp/`
+first (the image's `/tmp` is a writable tmpfs).
 
 > This service uses PostgreSQL only; it has no Redis dependency, so nothing Redis
 > is started or required.

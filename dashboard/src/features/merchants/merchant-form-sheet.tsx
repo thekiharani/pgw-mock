@@ -141,18 +141,36 @@ function MerchantForm({ merchant, onClose }: { merchant?: MerchantDto; onClose: 
           }}
         >
           <Field className="sm:col-span-2" label="Name" htmlFor="name">
-            <Input id="name" required value={form.name} onChange={update('name')} />
+            <Input
+              id="name"
+              required
+              placeholder="e.g. Bamburi Cement Sandbox"
+              value={form.name}
+              onChange={update('name')}
+            />
           </Field>
           <Field label="Email" htmlFor="email">
-            <Input id="email" type="email" value={form.email} onChange={update('email')} />
+            <Input
+              id="email"
+              type="email"
+              placeholder="billing@company.co.ke"
+              value={form.email}
+              onChange={update('email')}
+            />
           </Field>
           <Field label="Phone number" htmlFor="phone">
-            <Input id="phone" value={form.phoneNumber} onChange={update('phoneNumber')} />
+            <Input
+              id="phone"
+              placeholder="2547XXXXXXXX"
+              value={form.phoneNumber}
+              onChange={update('phoneNumber')}
+            />
           </Field>
           <Field label="M-Pesa paybill" htmlFor="paybill">
             <Input
               id="paybill"
               required
+              placeholder="e.g. 887001"
               value={form.mpesaPaybillNumber}
               onChange={update('mpesaPaybillNumber')}
             />
@@ -161,6 +179,7 @@ function MerchantForm({ merchant, onClose }: { merchant?: MerchantDto; onClose: 
             <Input
               id="till"
               required
+              placeholder="e.g. 886001"
               value={form.sasapayTillNumber}
               onChange={update('sasapayTillNumber')}
             />
@@ -211,6 +230,7 @@ function MerchantForm({ merchant, onClose }: { merchant?: MerchantDto; onClose: 
             <Input
               id="mbal"
               inputMode="decimal"
+              placeholder="0.00"
               value={form.mpesaBalance}
               onChange={update('mpesaBalance')}
             />
@@ -219,6 +239,7 @@ function MerchantForm({ merchant, onClose }: { merchant?: MerchantDto; onClose: 
             <Input
               id="sbal"
               inputMode="decimal"
+              placeholder="0.00"
               value={form.sasapayBalance}
               onChange={update('sasapayBalance')}
             />

@@ -45,6 +45,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { ROLE_OPTIONS } from '@/lib/roles';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { UserFormSheet } from '@/features/admin/user-form-sheet';
 
 export function AdminUserDetailPage() {
@@ -290,7 +291,7 @@ function GrantAccessDialog({
   onGrant: (merchantId: string, role: MerchantRole) => void;
 }) {
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
+  const query = useDebouncedValue(search.trim(), 300);
   const [role, setRole] = useState<MerchantRole>('member');
 
   const { data, isFetching } = useQuery({
@@ -316,12 +317,6 @@ function GrantAccessDialog({
                 placeholder="Search name, paybill, till…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    setQuery(search.trim());
-                  }
-                }}
               />
             </div>
             <Select value={role} onValueChange={(v) => setRole(v as MerchantRole)}>
