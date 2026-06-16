@@ -26,7 +26,6 @@ export async function homeRoutes(app: FastifyInstance): Promise<void> {
         message: 'Welcome to Noria Payments API Mock Server',
         IP: request.ip ?? null,
         app_url: settings.SERVICE_URL,
-        payments_service_url: settings.PAYMENTS_SERVICE_URL,
         agent: request.headers['user-agent'] ?? null,
         datePrefix: DateUtils.datePrefix(),
         mpesaCode: PaymentsUtils.generateTransactionCode(),
@@ -34,24 +33,6 @@ export async function homeRoutes(app: FastifyInstance): Promise<void> {
       };
     });
   }
-
-  app.get('/ping', async () => {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), settings.HTTP_TIMEOUT_SECONDS * 1000);
-      let json: unknown = null;
-      try {
-        const rsp = await fetch(settings.PAYMENTS_SERVICE_URL, { signal: controller.signal });
-        json = await rsp.json();
-      } finally {
-        clearTimeout(timeout);
-      }
-      return { message: 'Welcome to Noria Payments API Mock Server', pingResponse: json };
-    } catch (exc) {
-      app.log.warn(`Ping failed: ${exc}`);
-      return { message: 'Welcome to Noria Payments API Mock Server', pingResponse: null };
-    }
-  });
 
   app.get('/healthz', async () => ({ status: true }));
 

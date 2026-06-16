@@ -219,9 +219,9 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
       };
     }
 
-    const confirmationUrl =
-      merchant.merchant_meta?.mpesa?.c2b_confirmation ||
-      `${settings.PAYMENTS_SERVICE_URL}/m/confirmation`;
+    // Mirrors real M-Pesa: a C2B confirmation is delivered only to the URL the
+    // merchant registered via /c2b/registerurl. No registration → no confirmation.
+    const confirmationUrl = merchant.merchant_meta?.mpesa?.c2b_confirmation ?? null;
 
     enqueueBackgroundTask(request, async () => {
       await deliverCallback({
@@ -232,7 +232,7 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
         payload: stkWebhookData,
         transactionId,
       });
-      if (c2bWebhookData) {
+      if (c2bWebhookData && confirmationUrl) {
         await sleep(settings.MOCK_CALLBACK_DELAY_SECONDS);
         await deliverCallback({
           provider: 'mpesa',
@@ -242,6 +242,10 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
           payload: c2bWebhookData,
           transactionId,
         });
+      } else if (c2bWebhookData) {
+        request.log.warn(
+          `mpesa: no c2b confirmation sent — shortcode ${partyB} (merchant ${merchant.merchant_id}) has no ConfirmationURL; register one via /c2b/registerurl`,
+        );
       }
     });
 
@@ -516,8 +520,7 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
     };
 
     const mpesaMeta = merchant.merchant_meta?.mpesa ?? {};
-    const confirmationUrl =
-      mpesaMeta.c2b_confirmation || `${settings.PAYMENTS_SERVICE_URL}/m/confirmation`;
+    const confirmationUrl = mpesaMeta.c2b_confirmation ?? null;
     const validationUrl = mpesaMeta.c2b_validation ?? null;
     const confirmationData = isSuccess ? webhookData : null;
 
@@ -536,7 +539,7 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
         const rc = 'ResultCode' in responseBody ? String(responseBody.ResultCode).trim() : '';
         if (rc && rc !== '0') validationAccepted = false;
       }
-      if (confirmationData && validationAccepted) {
+      if (confirmationData && validationAccepted && confirmationUrl) {
         await deliverCallback({
           provider: 'mpesa',
           flow: 'c2b',
@@ -545,6 +548,10 @@ export async function mpesaCoreRoutes(app: FastifyInstance): Promise<void> {
           payload: confirmationData,
           transactionId,
         });
+      } else if (confirmationData && !confirmationUrl) {
+        request.log.warn(
+          `mpesa: no c2b confirmation sent — shortcode ${shortCode} (merchant ${merchant.merchant_id}) has no ConfirmationURL; register one via /c2b/registerurl`,
+        );
       }
     });
 

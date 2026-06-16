@@ -231,13 +231,7 @@ describe('bill manager — more endpoints', () => {
   });
 });
 
-describe('home /ping + error envelopes', () => {
-  it('/ping returns null when payments service is unreachable', async () => {
-    const { status, json } = await get('/ping');
-    expect(status).toBe(200);
-    expect(json.pingResponse).toBeNull();
-  });
-
+describe('error envelopes', () => {
   it('malformed JSON body yields a 4xx envelope', async () => {
     const { getApp } = await import('@test/helpers/app.js');
     const app = await getApp();
